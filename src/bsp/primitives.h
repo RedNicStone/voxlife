@@ -52,6 +52,24 @@ namespace voxelife::bsp {
       /* [LUMP_MODELS]        = */ 400
   };
 
+  constexpr const char* lump_names[] = {
+      /* [LUMP_ENTITIES]      = */ "LUMP_ENTITIES",
+      /* [LUMP_PLANES]        = */ "LUMP_PLANES",
+      /* [LUMP_TEXTURES]      = */ "LUMP_TEXTURES",
+      /* [LUMP_VERTICES]      = */ "LUMP_VERTICES",
+      /* [LUMP_VISIBILITY]    = */ "LUMP_VISIBILITY",
+      /* [LUMP_NODES]         = */ "LUMP_NODES",
+      /* [LUMP_TEXINFO]       = */ "LUMP_TEXINFO",
+      /* [LUMP_FACES]         = */ "LUMP_FACES",
+      /* [LUMP_LIGHTING]      = */ "LUMP_LIGHTING",
+      /* [LUMP_CLIPNODES]     = */ "LUMP_CLIPNODES",
+      /* [LUMP_LEAFS]         = */ "LUMP_LEAFS",
+      /* [LUMP_MARKSURFACES]  = */ "LUMP_MARKSURFACES",
+      /* [LUMP_EDGES]         = */ "LUMP_EDGES",
+      /* [LUMP_SURFEDGES]     = */ "LUMP_SURFEDGES",
+      /* [LUMP_MODELS]        = */ "LUMP_MODELS"
+  };
+
   struct lump {
       int32_t offset;
       int32_t length;
