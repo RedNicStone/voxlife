@@ -23,6 +23,8 @@ namespace voxlife::bsp {
           const header *header;
       };
 
+      wad::wad_handle resources;
+
       const void* lump_begins[lump_type::LUMP_MAX];
       const void* lump_ends[lump_type::LUMP_MAX];
 
@@ -43,12 +45,11 @@ namespace voxlife::bsp {
 
 
   void parse_header(bsp_info &info) {
-      auto* header = reinterpret_cast<const struct header*>(info.file_data);
-      if (header->version != header::bsp_version_halflife)
-          throw std::runtime_error(std::format("Unsupported BSP version {}", header->version));
+      if (info.header->version != header::bsp_version_halflife)
+          throw std::runtime_error(std::format("Unsupported BSP version {}", info.header->version));
 
       for (int i = 0; i < lump_type::LUMP_MAX; ++i) {
-          auto& lump = header->lumps[i];
+          auto& lump = info.header->lumps[i];
           if (lump.offset < 0 || lump.length < 0)
               throw std::runtime_error(std::format("Lump {} is not valid", lump_names[i]));
 
@@ -59,32 +60,32 @@ namespace voxlife::bsp {
           info.lump_ends[i]   = info.file_data + lump.offset + lump.length;
       }
 
-      info.entities      = std::span(static_cast<const entity*>      (info.lump_begins[lump_type::LUMP_ENTITIES]),
-                                     static_cast<const entity*>      (  info.lump_ends[lump_type::LUMP_ENTITIES]));
-      info.planes        = std::span(static_cast<const plane*>       (info.lump_begins[lump_type::LUMP_PLANES]),
-                                     static_cast<const plane*>       (  info.lump_ends[lump_type::LUMP_PLANES]));
-      info.textures      = std::span(static_cast<const mip_texture*> (info.lump_begins[lump_type::LUMP_TEXTURES]),
-                                     static_cast<const mip_texture*> (  info.lump_ends[lump_type::LUMP_TEXTURES]));
-      info.vertices      = std::span(static_cast<const vertex*>      (info.lump_begins[lump_type::LUMP_VERTICES]),
-                                     static_cast<const vertex*>      (  info.lump_ends[lump_type::LUMP_VERTICES]));
-      info.nodes         = std::span(static_cast<const node*>        (info.lump_begins[lump_type::LUMP_NODES]),
-                                     static_cast<const node*>        (  info.lump_ends[lump_type::LUMP_NODES]));
-      info.texture_infos = std::span(static_cast<const texture_info*>(info.lump_begins[lump_type::LUMP_TEXINFO]),
-                                     static_cast<const texture_info*>(  info.lump_ends[lump_type::LUMP_TEXINFO]));
-      info.faces         = std::span(static_cast<const face*>        (info.lump_begins[lump_type::LUMP_FACES]),
-                                     static_cast<const face*>        (  info.lump_ends[lump_type::LUMP_FACES]));
-      info.clip_nodes    = std::span(static_cast<const clip_node*>   (info.lump_begins[lump_type::LUMP_CLIPNODES]),
-                                     static_cast<const clip_node*>   (  info.lump_ends[lump_type::LUMP_CLIPNODES]));
-      info.leafs         = std::span(static_cast<const leaf*>        (info.lump_begins[lump_type::LUMP_LEAFS]),
-                                     static_cast<const leaf*>        (  info.lump_ends[lump_type::LUMP_LEAFS]));
-      info.mark_surfaces = std::span(static_cast<const mark_surface*>(info.lump_begins[lump_type::LUMP_MARKSURFACES]),
-                                     static_cast<const mark_surface*>(  info.lump_ends[lump_type::LUMP_MARKSURFACES]));
-      info.edges         = std::span(static_cast<const edge*>        (info.lump_begins[lump_type::LUMP_EDGES]),
-                                     static_cast<const edge*>        (  info.lump_ends[lump_type::LUMP_EDGES]));
-      info.surface_edges = std::span(static_cast<const surf_edge*>   (info.lump_begins[lump_type::LUMP_SURFEDGES]),
-                                     static_cast<const surf_edge*>   (  info.lump_ends[lump_type::LUMP_SURFEDGES]));
-      info.models        = std::span(static_cast<const model*>       (info.lump_begins[lump_type::LUMP_MODELS]),
-                                     static_cast<const model*>       (  info.lump_ends[lump_type::LUMP_MODELS]));
+      info.entities      = std::span(reinterpret_cast<const entity*>      (info.lump_begins[lump_type::LUMP_ENTITIES]),
+                                     reinterpret_cast<const entity*>      (  info.lump_ends[lump_type::LUMP_ENTITIES]));
+      info.planes        = std::span(reinterpret_cast<const plane*>       (info.lump_begins[lump_type::LUMP_PLANES]),
+                                     reinterpret_cast<const plane*>       (  info.lump_ends[lump_type::LUMP_PLANES]));
+      info.textures      = std::span(reinterpret_cast<const mip_texture*> (info.lump_begins[lump_type::LUMP_TEXTURES]),
+                                     reinterpret_cast<const mip_texture*> (  info.lump_ends[lump_type::LUMP_TEXTURES]));
+      info.vertices      = std::span(reinterpret_cast<const vertex*>      (info.lump_begins[lump_type::LUMP_VERTICES]),
+                                     reinterpret_cast<const vertex*>      (  info.lump_ends[lump_type::LUMP_VERTICES]));
+      info.nodes         = std::span(reinterpret_cast<const node*>        (info.lump_begins[lump_type::LUMP_NODES]),
+                                     reinterpret_cast<const node*>        (  info.lump_ends[lump_type::LUMP_NODES]));
+      info.texture_infos = std::span(reinterpret_cast<const texture_info*>(info.lump_begins[lump_type::LUMP_TEXINFO]),
+                                     reinterpret_cast<const texture_info*>(  info.lump_ends[lump_type::LUMP_TEXINFO]));
+      info.faces         = std::span(reinterpret_cast<const face*>        (info.lump_begins[lump_type::LUMP_FACES]),
+                                     reinterpret_cast<const face*>        (  info.lump_ends[lump_type::LUMP_FACES]));
+      info.clip_nodes    = std::span(reinterpret_cast<const clip_node*>   (info.lump_begins[lump_type::LUMP_CLIPNODES]),
+                                     reinterpret_cast<const clip_node*>   (  info.lump_ends[lump_type::LUMP_CLIPNODES]));
+      info.leafs         = std::span(reinterpret_cast<const leaf*>        (info.lump_begins[lump_type::LUMP_LEAFS]),
+                                     reinterpret_cast<const leaf*>        (  info.lump_ends[lump_type::LUMP_LEAFS]));
+      info.mark_surfaces = std::span(reinterpret_cast<const mark_surface*>(info.lump_begins[lump_type::LUMP_MARKSURFACES]),
+                                     reinterpret_cast<const mark_surface*>(  info.lump_ends[lump_type::LUMP_MARKSURFACES]));
+      info.edges         = std::span(reinterpret_cast<const edge*>        (info.lump_begins[lump_type::LUMP_EDGES]),
+                                     reinterpret_cast<const edge*>        (  info.lump_ends[lump_type::LUMP_EDGES]));
+      info.surface_edges = std::span(reinterpret_cast<const surf_edge*>   (info.lump_begins[lump_type::LUMP_SURFEDGES]),
+                                     reinterpret_cast<const surf_edge*>   (  info.lump_ends[lump_type::LUMP_SURFEDGES]));
+      info.models        = std::span(reinterpret_cast<const model*>       (info.lump_begins[lump_type::LUMP_MODELS]),
+                                     reinterpret_cast<const model*>       (  info.lump_ends[lump_type::LUMP_MODELS]));
   }
 
   template<typename T>
@@ -133,9 +134,79 @@ namespace voxlife::bsp {
       }
   }
 
-  void open_file(std::string_view filename, bsp_handle* handle) {
-      handle = reinterpret_cast<bsp_handle *>(new bsp_info{});
-      auto& info = reinterpret_cast<bsp_info&>(*handle);
+  void read_textures(bsp_info &info) {
+      auto* texture_lump_begin = reinterpret_cast<const uint8_t*>(info.lump_begins[lump_type::LUMP_TEXTURES]);
+      auto* texture_lump_end = reinterpret_cast<const uint8_t*>(info.lump_ends[lump_type::LUMP_TEXTURES]);
+
+      auto* texture_header = reinterpret_cast<const bsp::texture_header*>(texture_lump_begin);
+      uint32_t texture_header_length = sizeof(bsp::texture_header) + (texture_header->mip_texture_count - 1) * sizeof(uint32_t);
+      auto* texture_begin = texture_lump_begin + sizeof(bsp::texture_header);
+      auto* texture_end = texture_lump_begin + texture_header_length;
+
+      if (texture_end > texture_lump_end)
+          throw std::runtime_error("Texture header extends beyond end of lump");
+
+      for (; texture_begin < texture_end; texture_begin += sizeof(uint32_t)) {
+          auto texture_offset = *reinterpret_cast<const uint32_t*>(texture_begin);
+          auto* mip_texture = reinterpret_cast<const uint8_t*>(texture_lump_begin + texture_offset);
+          auto* mip_texture_handle = reinterpret_cast<const bsp::mip_texture*>(mip_texture);
+
+          if (reinterpret_cast<const uint8_t*>(mip_texture) > texture_lump_end)
+              throw std::runtime_error("Mip texture extends beyond end of lump");
+
+          const uint8_t* texture_data_begin;
+          if (mip_texture_handle->offsets[0] & mip_texture_handle->offsets[1]
+            & mip_texture_handle->offsets[2] & mip_texture_handle->offsets[3]) {
+              // Texture is internal, do nothing
+          } else {
+              // Texture is external, load it
+              mip_texture = reinterpret_cast<const uint8_t*>(wad::get_entry(info.resources, mip_texture_handle->name));
+              if (mip_texture == nullptr) {
+                  std::cout << std::format("Could not find texture '{}'\n", mip_texture_handle->name);
+                  continue;
+              }
+
+              mip_texture_handle = reinterpret_cast<const bsp::mip_texture*>(mip_texture);
+          }
+
+          const uint32_t texel_count = mip_texture_handle->width * mip_texture_handle->height;
+          auto color_data = mip_texture + mip_texture_handle->offsets[3] + texel_count / 64 + 2;
+
+          if (color_data + 256 > texture_lump_end)
+              throw std::runtime_error("Color data extends beyond end of lump");
+
+          for (int i = 0; i < bsp::mip_texture::mip_levels; ++i) {
+              const uint32_t texture_width  = mip_texture_handle->width >> (i * 2);
+              const uint32_t texture_height = mip_texture_handle->height >> (i * 2);
+              const uint32_t texture_length = texel_count >> (i * 2);
+              const uint8_t* texture_data = mip_texture + mip_texture_handle->offsets[i];
+
+              if (texture_data + texture_length > color_data)
+                  throw std::runtime_error("Texture data extends beyond color data");
+
+              auto file = std::ofstream(std::format("texture_{}_{}.ppm", mip_texture_handle->name, i), std::ios::out);
+              file << "P3\n";
+              file << texture_width << " " << texture_height << "\n255";
+              for (uint32_t y = 0; y < texture_height; ++y) {
+                  for (uint32_t x = 0; x < texture_width; ++x) {
+                      uint8_t index = texture_data[y * texture_width + x];
+                      uint8_t r = color_data[index * 3 + 0];
+                      uint8_t g = color_data[index * 3 + 1];
+                      uint8_t b = color_data[index * 3 + 2];
+                      file << "\n" << +r << " " << +g << " " << +b;
+                  }
+              }
+          }
+
+          std::cout << mip_texture_handle->name << std::endl;
+          std::cout << mip_texture_handle->width << std::endl;
+          std::cout << mip_texture_handle->height << std::endl;
+      }
+  }
+
+  void open_file(std::string_view filename, wad::wad_handle resources, bsp_handle* handle) {
+      *handle = reinterpret_cast<bsp_handle>(new bsp_info{});
+      auto& info = reinterpret_cast<bsp_info&>(**handle);
 
       info.bsp_file = open(filename.data(), O_RDONLY);
       if (info.bsp_file < 0)
@@ -155,10 +226,12 @@ namespace voxlife::bsp {
           throw std::runtime_error(std::format("Could not madvise file '{}'", filename));
 
       info.file_data = reinterpret_cast<uint8_t*>(data);
+      info.resources = resources;
 
       parse_header(info);
 
-      read_map(info);
+      //read_map(info);
+      read_textures(info);
   }
 
 }

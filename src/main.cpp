@@ -1,5 +1,6 @@
 
 #include <bsp/readfile.h>
+#include <wad/readfile.h>
 
 #include <iostream>
 
@@ -10,7 +11,10 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    voxlife::bsp::bsp_handle handle;
-    voxlife::bsp::open_file(argv[1], &handle);
+    voxlife::wad::wad_handle wad_handle;
+    voxlife::wad::open_file("/mnt/int/games/linux/steamapps/common/Half-Life/valve/halflife.wad", &wad_handle);
+
+    voxlife::bsp::bsp_handle bsp_handle;
+    voxlife::bsp::open_file(argv[1], wad_handle, &bsp_handle);
     return 0;
 }

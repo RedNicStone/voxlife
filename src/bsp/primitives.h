@@ -1,6 +1,6 @@
 
-#ifndef VOXLIFE_PRIMITIVES_H
-#define VOXLIFE_PRIMITIVES_H
+#ifndef VOXLIFE_BSP_PRIMITIVES_H
+#define VOXLIFE_BSP_PRIMITIVES_H
 
 #include <cstdint>
 
@@ -225,4 +225,4 @@ namespace voxlife::bsp {
 
 }
 
-#endif //VOXLIFE_PRIMITIVES_H
+#endif //VOXLIFE_BSP_PRIMITIVES_H
