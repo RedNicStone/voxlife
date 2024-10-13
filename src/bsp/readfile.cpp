@@ -8,7 +8,9 @@
 #include <fstream>
 
 #if defined(_WIN32)
-
+#include <fileapi.h>
+#include <winbase.h>
+#include <memoryapi.h>
 #else
 #include <sys/fcntl.h>
 #include <sys/stat.h>
@@ -19,7 +21,12 @@
 namespace voxlife::bsp {
 
     struct bsp_info {
+#if defined(_WIN32)
+        HANDLE hFile;
+        HANDLE hMap;
+#else
         int bsp_file = -1;
+#endif
         size_t file_size = 0;
 
         union {
@@ -215,71 +222,46 @@ namespace voxlife::bsp {
 
 #if defined(_WIN32)
 
-        HANDLE hFile;
-      HANDLE hMap;
-      LPVOID lpBasePtr;
-      LARGE_INTEGER liFileSize;
+        LPVOID lpBasePtr;
+        LARGE_INTEGER liFileSize;
 
-      hFile = CreateFile(filename.data(),
-              GENERIC_READ,                          // dwDesiredAccess
-              0,                                     // dwShareMode
-      NULL,                                  // lpSecurityAttributes
-      OPEN_EXISTING,                         // dwCreationDisposition
-      FILE_ATTRIBUTE_NORMAL,                 // dwFlagsAndAttributes
-      0);                                    // hTemplateFile
-      if (hFile == INVALID_HANDLE_VALUE) {
-      fprintf(stderr, "CreateFile failed with error %d\n", GetLastError());
-      return 1;
-      }
+        info.hFile = CreateFile(filename.data(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 
-      if (!GetFileSizeEx(hFile, &liFileSize)) {
-      fprintf(stderr, "GetFileSize failed with error %d\n", GetLastError());
-      CloseHandle(hFile);
-      return 1;
-      }
+        if (info.hFile == INVALID_HANDLE_VALUE) {
+            auto err = GetLastError();
+            throw std::runtime_error(std::format("CreateFile failed with error '{}'", err));
+        }
 
-      if (liFileSize.QuadPart == 0) {
-      fprintf(stderr, "File is empty\n");
-      CloseHandle(hFile);
-      return 1;
-      }
+        if (!GetFileSizeEx(info.hFile, &liFileSize)) {
+            auto err = GetLastError();
+            CloseHandle(info.hFile);
+            throw std::runtime_error(std::format("GetFileSize failed with error '{}'", err));
+        }
 
-      hMap = CreateFileMapping(
-      hFile,
-      NULL,                          // Mapping attributes
-      PAGE_READONLY,                 // Protection flags
-      0,                             // MaximumSizeHigh
-      0,                             // MaximumSizeLow
-      NULL);                         // Name
-      if (hMap == 0) {
-      fprintf(stderr, "CreateFileMapping failed with error %d\n", GetLastError());
-      CloseHandle(hFile);
-      return 1;
-      }
+        if (liFileSize.QuadPart == 0) {
+            CloseHandle(info.hFile);
+            throw std::runtime_error(std::format("File is empty '{}'", filename));
+        }
 
-      lpBasePtr = MapViewOfFile(
-      hMap,
-      FILE_MAP_READ,         // dwDesiredAccess
-      0,                     // dwFileOffsetHigh
-      0,                     // dwFileOffsetLow
-      0);                    // dwNumberOfBytesToMap
-      if (lpBasePtr == NULL) {
-      fprintf(stderr, "MapViewOfFile failed with error %d\n", GetLastError());
-      CloseHandle(hMap);
-      CloseHandle(hFile);
-      return 1;
-      }
+        info.hMap = CreateFileMapping(info.hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
 
-      // Display file content as ASCII charaters
-      char *ptr = (char *)lpBasePtr;
-      LONGLONG i = liFileSize.QuadPart;
-      while (i-- > 0) {
-      fputc(*ptr++, stdout);
-      }
+        if (info.hMap == 0) {
+            auto err = GetLastError();
+            CloseHandle(info.hFile);
+            throw std::runtime_error(std::format("CreateFileMapping failed with error '{}'", err));
+        }
 
-      UnmapViewOfFile(lpBasePtr);
-      CloseHandle(hMap);
-      CloseHandle(hFile);
+        lpBasePtr = MapViewOfFile(info.hMap, FILE_MAP_READ, 0, 0, 0);
+
+        if (lpBasePtr == nullptr) {
+            auto err = GetLastError();
+            CloseHandle(info.hMap);
+            CloseHandle(info.hFile);
+            throw std::runtime_error(std::format("MapViewOfFile failed with error '{}'", err));
+        }
+
+        info.file_size = liFileSize.QuadPart;
+        info.file_data = reinterpret_cast<uint8_t*>(lpBasePtr);
 
 #else
 

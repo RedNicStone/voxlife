@@ -9,9 +9,15 @@
 #include <cstring>
 #include <unordered_map>
 
+#if defined(_WIN32)
+#include <fileapi.h>
+#include <winbase.h>
+#include <memoryapi.h>
+#else
 #include <sys/fcntl.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#endif
 
 
 namespace voxlife::wad {
@@ -59,7 +65,12 @@ namespace voxlife::wad {
     };
 
     struct wad_info {
+#if defined(_WIN32)
+        HANDLE hFile;
+        HANDLE hMap;
+#else
         int wad_file = -1;
+#endif
         size_t file_size = 0;
 
         union {
@@ -91,6 +102,51 @@ namespace voxlife::wad {
         *handle = reinterpret_cast<wad_handle>(new wad_info());
         auto& info = reinterpret_cast<wad_info&>(**handle);
 
+#if defined(_WIN32)
+
+        LPVOID lpBasePtr;
+        LARGE_INTEGER liFileSize;
+
+        info.hFile = CreateFile(filename.data(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+
+        if (info.hFile == INVALID_HANDLE_VALUE) {
+            auto err = GetLastError();
+            throw std::runtime_error(std::format("CreateFile failed with error '{}'", err));
+        }
+
+        if (!GetFileSizeEx(info.hFile, &liFileSize)) {
+            auto err = GetLastError();
+            CloseHandle(info.hFile);
+            throw std::runtime_error(std::format("GetFileSize failed with error '{}'", err));
+        }
+
+        if (liFileSize.QuadPart == 0) {
+            CloseHandle(info.hFile);
+            throw std::runtime_error(std::format("File is empty '{}'", filename));
+        }
+
+        info.hMap = CreateFileMapping(info.hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
+
+        if (info.hMap == 0) {
+            auto err = GetLastError();
+            CloseHandle(info.hFile);
+            throw std::runtime_error(std::format("CreateFileMapping failed with error '{}'", err));
+        }
+
+        lpBasePtr = MapViewOfFile(info.hMap, FILE_MAP_READ, 0, 0, 0);
+
+        if (lpBasePtr == nullptr) {
+            auto err = GetLastError();
+            CloseHandle(info.hMap);
+            CloseHandle(info.hFile);
+            throw std::runtime_error(std::format("MapViewOfFile failed with error '{}'", err));
+        }
+
+        info.file_size = liFileSize.QuadPart;
+        info.file_data = reinterpret_cast<uint8_t*>(lpBasePtr);
+
+#else
+
         info.wad_file = open(filename.data(), O_RDONLY);
         if (info.wad_file < 0)
             throw std::runtime_error(std::format("Could not open file '{}'", filename));
@@ -109,6 +165,8 @@ namespace voxlife::wad {
             throw std::runtime_error(std::format("Could not madvise file '{}'", filename));
 
         info.file_data = reinterpret_cast<uint8_t*>(data);
+
+#endif
 
         index_entries(info);
     }
