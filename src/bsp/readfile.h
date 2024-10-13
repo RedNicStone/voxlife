@@ -9,9 +9,9 @@
 
 namespace voxlife::bsp {
 
-  typedef struct bsp_handle_T *bsp_handle;
+    typedef struct bsp_handle_T *bsp_handle;
 
-  void open_file(std::string_view filename, wad::wad_handle resources, bsp_handle* handle);
+    void open_file(std::string_view filename, wad::wad_handle resources, bsp_handle* handle);
 
 }
 
