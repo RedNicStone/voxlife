@@ -25,7 +25,22 @@ namespace voxlife::bsp {
 
       const void* lump_begins[lump_type::LUMP_MAX];
       const void* lump_ends[lump_type::LUMP_MAX];
+
+      std::span<const entity>       entities;
+      std::span<const plane>        planes;
+      std::span<const mip_texture>  textures;
+      std::span<const vertex>       vertices;
+      std::span<const node>         nodes;
+      std::span<const texture_info> texture_infos;
+      std::span<const face>         faces;
+      std::span<const clip_node>    clip_nodes;
+      std::span<const leaf>         leafs;
+      std::span<const mark_surface> mark_surfaces;
+      std::span<const edge>         edges;
+      std::span<const surf_edge>    surface_edges;
+      std::span<const model>        models;
   };
+
 
   void parse_header(bsp_info &info) {
       auto* header = reinterpret_cast<const struct header*>(info.file_data);
@@ -44,46 +59,76 @@ namespace voxlife::bsp {
           info.lump_ends[i]   = info.file_data + lump.offset + lump.length;
       }
 
+      info.entities      = std::span(static_cast<const entity*>      (info.lump_begins[lump_type::LUMP_ENTITIES]),
+                                     static_cast<const entity*>      (  info.lump_ends[lump_type::LUMP_ENTITIES]));
+      info.planes        = std::span(static_cast<const plane*>       (info.lump_begins[lump_type::LUMP_PLANES]),
+                                     static_cast<const plane*>       (  info.lump_ends[lump_type::LUMP_PLANES]));
+      info.textures      = std::span(static_cast<const mip_texture*> (info.lump_begins[lump_type::LUMP_TEXTURES]),
+                                     static_cast<const mip_texture*> (  info.lump_ends[lump_type::LUMP_TEXTURES]));
+      info.vertices      = std::span(static_cast<const vertex*>      (info.lump_begins[lump_type::LUMP_VERTICES]),
+                                     static_cast<const vertex*>      (  info.lump_ends[lump_type::LUMP_VERTICES]));
+      info.nodes         = std::span(static_cast<const node*>        (info.lump_begins[lump_type::LUMP_NODES]),
+                                     static_cast<const node*>        (  info.lump_ends[lump_type::LUMP_NODES]));
+      info.texture_infos = std::span(static_cast<const texture_info*>(info.lump_begins[lump_type::LUMP_TEXINFO]),
+                                     static_cast<const texture_info*>(  info.lump_ends[lump_type::LUMP_TEXINFO]));
+      info.faces         = std::span(static_cast<const face*>        (info.lump_begins[lump_type::LUMP_FACES]),
+                                     static_cast<const face*>        (  info.lump_ends[lump_type::LUMP_FACES]));
+      info.clip_nodes    = std::span(static_cast<const clip_node*>   (info.lump_begins[lump_type::LUMP_CLIPNODES]),
+                                     static_cast<const clip_node*>   (  info.lump_ends[lump_type::LUMP_CLIPNODES]));
+      info.leafs         = std::span(static_cast<const leaf*>        (info.lump_begins[lump_type::LUMP_LEAFS]),
+                                     static_cast<const leaf*>        (  info.lump_ends[lump_type::LUMP_LEAFS]));
+      info.mark_surfaces = std::span(static_cast<const mark_surface*>(info.lump_begins[lump_type::LUMP_MARKSURFACES]),
+                                     static_cast<const mark_surface*>(  info.lump_ends[lump_type::LUMP_MARKSURFACES]));
+      info.edges         = std::span(static_cast<const edge*>        (info.lump_begins[lump_type::LUMP_EDGES]),
+                                     static_cast<const edge*>        (  info.lump_ends[lump_type::LUMP_EDGES]));
+      info.surface_edges = std::span(static_cast<const surf_edge*>   (info.lump_begins[lump_type::LUMP_SURFEDGES]),
+                                     static_cast<const surf_edge*>   (  info.lump_ends[lump_type::LUMP_SURFEDGES]));
+      info.models        = std::span(static_cast<const model*>       (info.lump_begins[lump_type::LUMP_MODELS]),
+                                     static_cast<const model*>       (  info.lump_ends[lump_type::LUMP_MODELS]));
+  }
+
+  template<typename T>
+  constexpr T& span_at(std::span<T> span, size_t index) {
+      if (index >= span.size())
+          throw std::out_of_range("Span index out of bounds");
+
+      return span[index];
+  }
+
+  template<typename T>
+  constexpr std::span<T> safe_subspan(std::span<T> span, size_t offset, size_t length) {
+      if (offset + length > span.size())
+          throw std::out_of_range("Span index out of bounds");
+
+      return span.subspan(offset, length);
+  }
+
+  void read_map(bsp_info &info) {
       auto file = std::ofstream("map.ply", std::ios::out);
 
       file << "ply\n";
       file << "format ascii 1.0\n";
-      file << "element vertex " << info.header->lumps[lump_type::LUMP_VERTICES].length / sizeof(bsp::vertex) << "\n";
+      file << "element vertex " << info.vertices.size() << "\n";
       file << "property float x\n";
       file << "property float y\n";
       file << "property float z\n";
-      file << "element face " << info.header->lumps[lump_type::LUMP_FACES].length / sizeof(bsp::face) << "\n";
+      file << "element face " << info.faces.size() << "\n";
       file << "property list uint int vertex_index\n";
       file << "end_header\n";
 
-      auto* vertex_begin    = static_cast<const bsp::vertex *>(info.lump_begins[lump_type::LUMP_VERTICES]);
-      for (auto* vertex = vertex_begin; vertex < info.lump_ends[lump_type::LUMP_VERTICES]; ++vertex)
-          file << vertex->x << " " << vertex->y << " " << vertex->z << "\n";
+      for (auto& vertex : info.vertices)
+          file << vertex.x << " " << vertex.y << " " << vertex.z << "\n";
 
-      auto* face_begin      = static_cast<const bsp::face *>(info.lump_begins[lump_type::LUMP_FACES]);
-      auto* face_end        = static_cast<const bsp::face *>(info.lump_ends[lump_type::LUMP_FACES]);
-      auto* edge_begin      = static_cast<const bsp::edge *>(info.lump_begins[lump_type::LUMP_EDGES]);
-      auto* edge_end        = static_cast<const bsp::edge *>(info.lump_ends[lump_type::LUMP_EDGES]);
-      auto* surfedge_begin  = static_cast<const surf_edge *>(info.lump_begins[lump_type::LUMP_SURFEDGES]);
-      auto* surfedge_end    = static_cast<const surf_edge *>(info.lump_ends[lump_type::LUMP_SURFEDGES]);
-      for (auto* face = face_begin; face < face_end; ++face) {
-          auto* face_edge_begin = surfedge_begin + face->first_edge;
-          auto* face_edge_end   = surfedge_begin + face->first_edge + face->edge_count;
+      for (auto& face : info.faces) {
+          auto surface_edges = safe_subspan(info.surface_edges, face.first_edge, face.edge_count);
 
-          if (face_edge_end > surfedge_end)
-              throw std::runtime_error("Face has invalid surface edges");
+          file << face.edge_count;
+          for (auto& surface_edge : surface_edges) {
+              auto edge = span_at(info.edges, std::abs(surface_edge.edge));
 
-          file << face->edge_count;
-
-          for (auto* surf_edge = face_edge_begin; surf_edge < face_edge_end; ++surf_edge) {
-              auto* edge = edge_begin + std::abs(surf_edge->edge);
-              if (edge < edge_begin || edge >= edge_end)
-                  throw std::runtime_error("Surface edge has invalid edges");
-
-              uint16_t edge_index = surf_edge->edge < 0 ? edge->vertex[0] : edge->vertex[1];
+              uint16_t edge_index = surface_edge.edge < 0 ? edge.vertex[0] : edge.vertex[1];
               file << " " << edge_index;
           }
-
           file << "\n";
       }
   }
@@ -112,6 +157,8 @@ namespace voxlife::bsp {
       info.file_data = reinterpret_cast<uint8_t*>(data);
 
       parse_header(info);
+
+      read_map(info);
   }
 
 }

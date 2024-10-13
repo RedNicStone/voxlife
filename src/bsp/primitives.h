@@ -112,8 +112,8 @@ namespace voxlife::bsp {
       // Followed by int32_t * mip_texture_count offsets which point to structures of texture
   };
 
-  struct texture {
-      constexpr static uint32_t max_texture_name = 32;
+  struct mip_texture {
+      constexpr static uint32_t max_texture_name = 16;
       constexpr static uint32_t mip_levels = 4;
 
       char name[max_texture_name];
@@ -128,7 +128,7 @@ namespace voxlife::bsp {
   // Purposefully omitted
 
   // Nodes
-  struct visibility {
+  struct node {
       uint32_t plane;
       int16_t children[2];
       int16_t min[3], max[3];
