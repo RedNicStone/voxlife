@@ -12,7 +12,7 @@
 #include <sys/mman.h>
 
 
-namespace voxelife::bsp {
+namespace voxlife::bsp {
 
   struct bsp_info {
       int bsp_file = -1;

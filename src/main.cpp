@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    voxelife::bsp::bsp_handle handle;
-    voxelife::bsp::open_file(argv[1], &handle);
+    voxlife::bsp::bsp_handle handle;
+    voxlife::bsp::open_file(argv[1], &handle);
     return 0;
 }
