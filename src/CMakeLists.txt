@@ -1,5 +1,5 @@
 
-file(GLOB_RECURSE SRC *.cpp)
+file(GLOB_RECURSE SRC ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 
 add_executable(voxlife ${SRC})
 
