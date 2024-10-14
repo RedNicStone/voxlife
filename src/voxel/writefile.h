@@ -2,19 +2,19 @@
 #ifndef VOXLIFE_VOXEL_WRITEFILE_H
 #define VOXLIFE_VOXEL_WRITEFILE_H
 
-#include <ogt_vox.h>
 #include <string_view>
 #include <span>
 
-
-struct Model {
-    ogt_vox_model model;
-    std::span<uint8_t> voxels; // 0-256, where 0 is the empty index
+struct VoxelModel {
+    std::span<uint32_t> voxels;
     int pos_x;
     int pos_y;
     int pos_z;
+    uint32_t size_x;
+    uint32_t size_y;
+    uint32_t size_z;
 };
 
-void write_scene(std::string_view filename, std::span<Model> in_models, ogt_vox_palette const &palette);
+void write_magicavoxel_model(std::string_view filename, std::span<VoxelModel> in_models);
 
 #endif //VOXLIFE_VOXEL_WRITEFILE_H

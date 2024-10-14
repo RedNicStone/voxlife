@@ -6,11 +6,10 @@
 #include <format>
 #include <iostream>
 #include <fstream>
+#include <span>
 
 #if defined(_WIN32)
-#include <fileapi.h>
-#include <winbase.h>
-#include <memoryapi.h>
+#include <windows.h>
 #else
 #include <sys/fcntl.h>
 #include <sys/stat.h>

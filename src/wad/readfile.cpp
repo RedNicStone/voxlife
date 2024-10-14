@@ -8,11 +8,10 @@
 #include <fstream>
 #include <cstring>
 #include <unordered_map>
+#include <span>
 
 #if defined(_WIN32)
-#include <fileapi.h>
-#include <winbase.h>
-#include <memoryapi.h>
+#include <windows.h>
 #else
 #include <sys/fcntl.h>
 #include <sys/stat.h>
