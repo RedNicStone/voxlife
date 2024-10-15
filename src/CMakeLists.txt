@@ -11,4 +11,5 @@ target_include_directories(voxlife
 target_link_libraries(voxlife
     PRIVATE
         opengametools
+        glm::glm
 )

@@ -4,16 +4,14 @@
 
 #include <cstdint>
 #include <vector>
+#include <glm/vec3.hpp>
+
 
 namespace voxlife::bsp {
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     // BSP primitives
-
-    struct vec3f32 {
-        float x, y, z;
-    };
 
     enum lump_type {
         LUMP_ENTITIES       = 0,
@@ -101,7 +99,7 @@ namespace voxlife::bsp {
 
     // Planes
     struct plane {
-        vec3f32 normal;
+        glm::vec3 normal;
         float dist;
 
         enum type : int32_t {
@@ -130,7 +128,7 @@ namespace voxlife::bsp {
     };
 
     // Vertices
-    struct vertex : vec3f32 { };
+    using vertex = glm::vec3;
 
     // Visibility
     // Purposefully omitted
@@ -145,9 +143,9 @@ namespace voxlife::bsp {
 
     // Texinfo
     struct texture_info {
-        vec3f32 s;
+        glm::vec3 s;
         float shift_s;
-        vec3f32 t;
+        glm::vec3 t;
         float shift_t;
         uint32_t mip_texture;   // index into textures lump
 
@@ -224,8 +222,8 @@ namespace voxlife::bsp {
     // Models
     struct model {
         constexpr static uint32_t max_map_hulls = 4;
-        vec3f32 min, max;                  // bounding box
-        vec3f32 origin;                    // coordinates of model origin
+        glm::vec3 min, max;                // bounding box
+        glm::vec3 origin;                  // coordinates of model origin
         int32_t head_nodes[max_map_hulls]; // index into node lumps
         int32_t vis_leafs;
         int32_t first_face, face_count;    // index into face lumps

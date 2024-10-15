@@ -5,17 +5,14 @@
 #include <cstdint>
 #include <span>
 #include <vector>
+#include <glm/vec2.hpp>
 
 
 namespace voxlife::voxel {
 
-    struct vec2f32 {
-        float x, y;
-    };
-
     struct grid_properties {
         uint32_t width, height;
-        vec2f32 origin;
+        glm::vec2 origin;
     };
 
 }
@@ -73,7 +70,7 @@ namespace {
         voxlife::voxel::grid_properties grid_info{};
         std::vector<varying_base*> varyings{};
 
-        void rasterize_polygon(std::span<voxlife::voxel::vec2f32> points);
+        void rasterize_polygon(std::span<glm::vec2> points);
     };
 
 }
@@ -97,7 +94,7 @@ namespace voxlife::voxel {
         *handle = reinterpret_cast<varying_handle>(varying);
     }
 
-    void rasterize_polygon(rasterizer_handle rasterizer, std::span<vec2f32> points);
+    void rasterize_polygon(rasterizer_handle rasterizer, std::span<glm::vec2> points);
 
     std::span<bool> get_occupancy_varying_grid(varying_handle varying);  // todo: NOP
     template<typename T>

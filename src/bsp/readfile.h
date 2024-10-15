@@ -5,9 +5,12 @@
 #include <wad/readfile.h>
 
 #include <string_view>
+#include <glm/vec3.hpp>
 
 
 namespace voxlife::bsp {
+
+
 
     typedef struct bsp_handle_T *bsp_handle;
 

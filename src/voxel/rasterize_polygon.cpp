@@ -5,7 +5,6 @@
 #include <vector>
 #include <numeric>
 #include <cmath>
-#include <fstream>
 #include <chrono>
 #include <iostream>
 
@@ -23,63 +22,34 @@ struct varying_occupancy : public varying_base {
 };
 
 
-void create_rasterizer(const grid_properties& grid_info, rasterizer_handle* handle) {
-    *handle = reinterpret_cast<rasterizer_handle>(new rasterizer(grid_info));
+namespace voxlife::voxel {
+
+    void create_rasterizer(const grid_properties &grid_info, rasterizer_handle *handle) {
+        *handle = reinterpret_cast<rasterizer_handle>(new rasterizer(grid_info));
+    }
+
+    void create_occupancy_varying(rasterizer_handle rasterizer, varying_handle *handle) {
+        auto &rasterizer_ref = *reinterpret_cast<struct rasterizer *>(rasterizer);
+
+        varying_base *varying = new varying_occupancy(rasterizer_ref.grid_info);
+        rasterizer_ref.varyings.push_back(varying);
+
+        *handle = reinterpret_cast<varying_handle>(varying);
+    }
+
+    void rasterize_polygon(rasterizer_handle rasterizer, std::span<glm::vec2> points) {
+        auto &rasterizer_ref = *reinterpret_cast<struct rasterizer *>(rasterizer);
+
+        rasterizer_ref.rasterize_polygon(points);
+    }
+
+    /*std::span<bool> get_occupancy_varying_grid(varying_handle varying) {
+        auto& varying_ref = *reinterpret_cast<struct varying_occupancy*>(varying);
+
+        return std::span(varying_ref.grid);
+    }*/
+
 }
-
-void create_occupancy_varying(rasterizer_handle rasterizer, varying_handle* handle) {
-    auto& rasterizer_ref = *reinterpret_cast<struct rasterizer*>(rasterizer);
-
-    varying_base* varying = new varying_occupancy(rasterizer_ref.grid_info);
-    rasterizer_ref.varyings.push_back(varying);
-
-    *handle = reinterpret_cast<varying_handle>(varying);
-}
-
-void rasterize_polygon(rasterizer_handle rasterizer, std::span<vec2f32> points) {
-    auto& rasterizer_ref = *reinterpret_cast<struct rasterizer*>(rasterizer);
-
-    rasterizer_ref.rasterize_polygon(points);
-}
-
-/*std::span<bool> get_occupancy_varying_grid(varying_handle varying) {
-    auto& varying_ref = *reinterpret_cast<struct varying_occupancy*>(varying);
-
-    return std::span(varying_ref.grid);
-}*/
-
-
-struct vec2 {
-    float x, y;
-
-    vec2 operator*(float s) const {
-        return vec2{x * s, y * s};
-    }
-
-    vec2 operator/(float s) const {
-        return vec2{x / s, y / s};
-    }
-
-    vec2 operator+(const vec2& other) const {
-        return vec2{x + other.x, y + other.y};
-    }
-
-    vec2 operator-(const vec2& other) const {
-        return vec2{x - other.x, y - other.y};
-    }
-
-    vec2 operator+=(const vec2& other) {
-        x += other.x;
-        y += other.y;
-        return *this;
-    }
-
-    vec2 operator-=(const vec2& other) {
-        x -= other.x;
-        y -= other.y;
-        return *this;
-    }
-};
 
 
 /// Intersects a horizontal ray with a line segment
@@ -87,7 +57,7 @@ struct vec2 {
 /// \param p1 Point 1 on the line segment
 /// \param p2 Point 2 on the line segment
 /// \return Horizontal position of the intersection, or std::nullopt if no intersection
-std::optional<float> intersectRayWithLine(float ray_y, const voxlife::voxel::vec2f32& p1, const voxlife::voxel::vec2f32& p2) {
+std::optional<float> intersectRayWithLine(float ray_y, const glm::vec2& p1, const glm::vec2& p2) {
     if (p1.y == p2.y)
         return std::nullopt;
 
@@ -105,7 +75,7 @@ void varying_occupancy::interpolate_row(const interpolation_info &info) {
 }
 
 
-void rasterizer::rasterize_polygon(std::span<voxlife::voxel::vec2f32> points) {
+void rasterizer::rasterize_polygon(std::span<glm::vec2> points) {
     size_t lowest_point_index;
 
     {
@@ -124,7 +94,6 @@ void rasterizer::rasterize_polygon(std::span<voxlife::voxel::vec2f32> points) {
     float min_x = grid_info.origin.x + 0.5f;
     float min_y = grid_info.origin.y + 0.5f;
     auto grid_width_float = static_cast<float>(grid_info.width - 1);
-    auto grid_height_float = static_cast<float>(grid_info.height - 1);
 
     uint32_t point_count_minus_one = points.size() - 1;
     uint32_t front_point_1_index = lowest_point_index;
@@ -181,9 +150,9 @@ void rasterizer::rasterize_polygon(std::span<voxlife::voxel::vec2f32> points) {
 
 /*
 void raster_test() {
-    std::vector<vec2f32> points{};
+    std::vector<glm::vec2> points{};
     std::vector<float> depth;
-    std::vector<vec2> uvs;
+    std::vector<glm::vec2> uvs;
 
     size_t point_count = 20;
     float radius = 500.0f;
@@ -202,7 +171,7 @@ void raster_test() {
     grid_properties grid_info{};
     grid_info.width = static_cast<uint32_t>(radius * 2);
     grid_info.height = static_cast<uint32_t>(radius * 2);
-    grid_info.origin = vec2f32{-radius, -radius};
+    grid_info.origin = glm::vec2{-radius, -radius};
 
     rasterizer_handle rasterizer;
     create_rasterizer(grid_info, &rasterizer);
