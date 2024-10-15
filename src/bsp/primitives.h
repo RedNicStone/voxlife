@@ -3,6 +3,7 @@
 #define VOXLIFE_BSP_PRIMITIVES_H
 
 #include <cstdint>
+#include <vector>
 
 namespace voxlife::bsp {
 
@@ -89,6 +90,13 @@ namespace voxlife::bsp {
     struct entity {
         constexpr static uint32_t max_key_value_pairs = 32;
         constexpr static uint32_t max_value = 1024;
+
+        struct key_value_pair {
+            std::string_view key;
+            std::string_view value;
+        };
+
+        std::vector<key_value_pair> key_value;
     };
 
     // Planes
@@ -194,8 +202,8 @@ namespace voxlife::bsp {
 
         int32_t visibility_offset;                          // index into visibility lump
         int16_t min[3], max[3];                             // bounding box
-        uint32_t first_mark_surface, mark_surface_count;    // index into marksurfaces lump
-        uint16_t ambient_sound_levels[4];
+        uint16_t first_mark_surface, mark_surface_count;    // index into marksurfaces lump
+        uint8_t ambient_sound_levels[4];
     };
 
     // Marksurfaces
@@ -215,7 +223,7 @@ namespace voxlife::bsp {
 
     // Models
     struct model {
-        constexpr static uint32_t max_map_hulls = 32;
+        constexpr static uint32_t max_map_hulls = 4;
         vec3f32 min, max;                  // bounding box
         vec3f32 origin;                    // coordinates of model origin
         int32_t head_nodes[max_map_hulls]; // index into node lumps

@@ -7,6 +7,7 @@
 #include <iostream>
 #include <fstream>
 #include <span>
+#include <stack>
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -38,7 +39,6 @@ namespace voxlife::bsp {
         const void* lump_begins[lump_type::LUMP_MAX];
         const void* lump_ends[lump_type::LUMP_MAX];
 
-        std::span<const entity>       entities;
         std::span<const plane>        planes;
         std::span<const mip_texture>  textures;
         std::span<const vertex>       vertices;
@@ -70,8 +70,6 @@ namespace voxlife::bsp {
             info.lump_ends[i]   = info.file_data + lump.offset + lump.length;
         }
 
-        info.entities      = std::span(reinterpret_cast<const entity*>      (info.lump_begins[lump_type::LUMP_ENTITIES]),
-                                       reinterpret_cast<const entity*>      (  info.lump_ends[lump_type::LUMP_ENTITIES]));
         info.planes        = std::span(reinterpret_cast<const plane*>       (info.lump_begins[lump_type::LUMP_PLANES]),
                                        reinterpret_cast<const plane*>       (  info.lump_ends[lump_type::LUMP_PLANES]));
         info.textures      = std::span(reinterpret_cast<const mip_texture*> (info.lump_begins[lump_type::LUMP_TEXTURES]),
@@ -100,7 +98,7 @@ namespace voxlife::bsp {
 
     template<typename T>
     constexpr T& span_at(std::span<T> span, size_t index) {
-        if (index >= span.size())
+        if (index >= span.size()) [[unlikely]]
             throw std::out_of_range("Span index out of bounds");
 
         return span[index];
@@ -108,7 +106,7 @@ namespace voxlife::bsp {
 
     template<typename T>
     constexpr std::span<T> safe_subspan(std::span<T> span, size_t offset, size_t length) {
-        if (offset + length > span.size())
+        if (offset + length > span.size()) [[unlikely]]
             throw std::out_of_range("Span index out of bounds");
 
         return span.subspan(offset, length);
@@ -164,7 +162,6 @@ namespace voxlife::bsp {
             if (reinterpret_cast<const uint8_t*>(mip_texture) > texture_lump_end)
                 throw std::runtime_error("Mip texture extends beyond end of lump");
 
-            const uint8_t* texture_data_begin;
             if (mip_texture_handle->offsets[0] & mip_texture_handle->offsets[1]
                 & mip_texture_handle->offsets[2] & mip_texture_handle->offsets[3]) {
                 // Texture is internal, do nothing
@@ -207,11 +204,58 @@ namespace voxlife::bsp {
                     }
                 }
             }
-
-            std::cout << mip_texture_handle->name << std::endl;
-            std::cout << mip_texture_handle->width << std::endl;
-            std::cout << mip_texture_handle->height << std::endl;
         }
+    }
+
+    void read_models(bsp_info &info) {
+        const auto& root_model = span_at(info.models, 0);
+        const auto& root_node = span_at(info.nodes, root_model.head_nodes[0]);
+
+        std::vector<face> faces;
+
+        auto face_span = safe_subspan(info.faces, root_model.first_face, root_model.face_count);
+        for (auto& face : face_span)
+            faces.push_back(face);
+
+        std::stack<node> node_stack;
+        node_stack.push(root_node);
+
+        uint32_t node_count = 0;
+        uint32_t leaf_count = 0;
+        uint32_t face_count = 0;
+
+        while (!node_stack.empty()) {
+            auto &node = node_stack.top();
+            node_stack.pop();
+
+            auto node_face_span = safe_subspan(info.faces, node.first_face, node.face_count);
+            for (auto& face : node_face_span)
+                faces.push_back(face);
+
+            for (auto& child_node : node.children) {
+                std::span<const mark_surface> mark_surfaces;
+
+                if (child_node > 0) {
+                    node_count++;
+                    node_stack.push(span_at(info.nodes, child_node));
+                    continue;
+                }
+
+                leaf_count++;
+                auto& leaf = span_at(info.leafs, -child_node);
+                mark_surfaces = safe_subspan(info.mark_surfaces, leaf.first_mark_surface, leaf.mark_surface_count);
+
+                face_count += leaf.mark_surface_count;
+
+                for (auto& mark_surface : mark_surfaces) {
+                    auto &face = span_at(info.faces, mark_surface.face);
+
+                    faces.push_back(face);
+                }
+            }
+        }
+
+
     }
 
     void open_file(std::string_view filename, wad::wad_handle resources, bsp_handle* handle) {
@@ -291,7 +335,8 @@ namespace voxlife::bsp {
         parse_header(info);
 
         //read_map(info);
-        read_textures(info);
+        read_models(info);
+        //read_textures(info);
     }
 
 }

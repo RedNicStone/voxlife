@@ -4,7 +4,6 @@
 
 #include <stdexcept>
 #include <format>
-#include <iostream>
 #include <fstream>
 #include <cstring>
 #include <unordered_map>
@@ -28,7 +27,7 @@ namespace voxlife::wad {
             const std::size_t FNV_prime = 1099511628211ULL;
 #elif SIZE_MAX == UINT32_MAX
             const std::size_t FNV_offset_basis = 2166136261U;
-          const std::size_t FNV_prime = 16777619U;
+            const std::size_t FNV_prime = 16777619U;
 #else
 #error "Unsupported size_t size"
 #endif
@@ -90,8 +89,6 @@ namespace voxlife::wad {
         for (auto& entry : entries) {
             if (entry.compressed)
                 throw std::runtime_error("Compressed entries are not supported");
-
-            std::cout << entry.name << std::endl;
 
             info.entries[entry.name] = info.file_data + entry.offset;
         }
