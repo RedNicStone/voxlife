@@ -15,6 +15,7 @@
 #include <span>
 #include <array>
 #include <algorithm>
+#include <fstream>
 
 auto rgb_to_oklab(std::array<double, 3> rgb) -> std::array<double, 3> {
     // Normalize the RGB values to the range [0, 1]
@@ -217,32 +218,57 @@ void kMeans(std::vector<Point> &points, int k, int max_iterations = 100) {
     } while (changed && iterations < max_iterations);
 }
 
-auto generate_palette(std::span<VoxelModel> in_models) -> std::pair<ogt_vox_palette, std::vector<std::vector<uint8_t>>> {
+auto generate_palette(std::span<const VoxelModel> in_models) -> std::pair<ogt_vox_palette, std::vector<std::vector<uint8_t>>> {
     auto result = std::pair<ogt_vox_palette, std::vector<std::vector<uint8_t>>>{};
     auto &[palette, model_voxels] = result;
 
-    std::vector<Point> points;
+    std::array<std::vector<Point>, MaterialType::_COUNT_> per_material_points{};
 
     for (auto const &model : in_models) {
-        points.reserve(points.size() + model.voxels.size());
+        for (auto &points : per_material_points)
+            points.reserve(points.size() + model.voxels.size());
         for (auto const &voxel : model.voxels) {
-            auto a = (voxel >> 24) & 0xff;
-            if (a == 0)
+            if (voxel.type == MaterialType::AIR)
                 continue;
             auto pt = std::array<double, 3>{};
-            pt[0] = static_cast<double>((voxel >> 0) & 0xff);
-            pt[1] = static_cast<double>((voxel >> 8) & 0xff);
-            pt[2] = static_cast<double>((voxel >> 16) & 0xff);
-            points.push_back(Point(rgb_to_oklab(pt)));
+            pt[0] = static_cast<double>(voxel.r);
+            pt[1] = static_cast<double>(voxel.g);
+            pt[2] = static_cast<double>(voxel.b);
+            per_material_points[voxel.type].push_back(Point(rgb_to_oklab(pt)));
         }
     }
 
-    kMeans(points, 32);
+    struct MaterialTypeInfo {
+        uint32_t slot_count;
+        uint32_t slot_offset;
+    };
+    auto per_material_infos = std::array<MaterialTypeInfo, MaterialType::_COUNT_>{
+        MaterialTypeInfo{.slot_count = 0, .slot_offset = 0},    // AIR
+        MaterialTypeInfo{.slot_count = 16, .slot_offset = 224}, // UN_PHYSICAL
+        MaterialTypeInfo{.slot_count = 8, .slot_offset = 176},  // HARD_MASONRY
+        MaterialTypeInfo{.slot_count = 8, .slot_offset = 168},  // HARD_METAL
+        MaterialTypeInfo{.slot_count = 16, .slot_offset = 152}, // PLASTIC
+        MaterialTypeInfo{.slot_count = 16, .slot_offset = 136}, // HEAVY_METAL
+        MaterialTypeInfo{.slot_count = 16, .slot_offset = 120}, // WEAK_METAL
+        MaterialTypeInfo{.slot_count = 16, .slot_offset = 104}, // PLASTER
+        MaterialTypeInfo{.slot_count = 16, .slot_offset = 88},  // BRICK
+        MaterialTypeInfo{.slot_count = 16, .slot_offset = 72},  // CONCRETE
+        MaterialTypeInfo{.slot_count = 16, .slot_offset = 56},  // WOOD
+        MaterialTypeInfo{.slot_count = 16, .slot_offset = 40},  // ROCK
+        MaterialTypeInfo{.slot_count = 16, .slot_offset = 24},  // DIRT
+        MaterialTypeInfo{.slot_count = 16, .slot_offset = 8},   // GRASS
+        MaterialTypeInfo{.slot_count = 8, .slot_offset = 0},    // GLASS
+    };
+
+    std::vector<std::vector<std::array<double, 4>>> per_material_per_cluster_sum{};
+    per_material_per_cluster_sum.resize(MaterialType::_COUNT_);
+    for (uint32_t i = 0; i < per_material_points.size(); ++i) {
+        per_material_per_cluster_sum[i].resize(per_material_infos[i].slot_count);
+        kMeans(per_material_points[i], per_material_infos[i].slot_count);
+    }
 
     model_voxels.resize(in_models.size());
-    uint32_t point_i = 0;
-
-    std::array<std::array<double, 4>, 32> sums{};
+    std::array<uint32_t, MaterialType::_COUNT_> per_material_point_i = {};
 
     for (uint32_t model_i = 0; model_i < in_models.size(); ++model_i) {
         auto const &model = in_models[model_i];
@@ -252,15 +278,16 @@ auto generate_palette(std::span<VoxelModel> in_models) -> std::pair<ogt_vox_pale
 
         for (uint32_t voxel_i = 0; voxel_i < model.voxels.size(); ++voxel_i) {
             auto const &voxel = model.voxels[voxel_i];
-            auto a = (voxel >> 24) & 0xff;
-            if (a == 0) {
+            if (voxel.type == MaterialType::AIR) {
                 voxels[voxel_i] = 0;
                 continue;
             }
-            auto const &point = points[point_i];
-            voxels[voxel_i] = point.cluster_id + 1;
+            auto &point_i = per_material_point_i[voxel.type];
+            auto const &material_info = per_material_infos[voxel.type];
+            auto const &point = per_material_points[voxel.type][point_i];
+            voxels[voxel_i] = material_info.slot_offset + point.cluster_id + 1;
 
-            auto &sum = sums[point.cluster_id];
+            auto &sum = per_material_per_cluster_sum[voxel.type][point.cluster_id];
             sum[0] += point.coordinates[0]; // static_cast<double>((voxel >> 0) & 0xff);
             sum[1] += point.coordinates[1]; // static_cast<double>((voxel >> 8) & 0xff);
             sum[2] += point.coordinates[2]; // static_cast<double>((voxel >> 16) & 0xff);
@@ -270,22 +297,25 @@ auto generate_palette(std::span<VoxelModel> in_models) -> std::pair<ogt_vox_pale
         }
     }
 
-    for (uint32_t in_palette_i = 0; in_palette_i < sums.size(); ++in_palette_i) {
-        auto &sum = sums[in_palette_i];
-        sum[0] /= sum[3];
-        sum[1] /= sum[3];
-        sum[2] /= sum[3];
-        auto &color = palette.color[in_palette_i + 1];
-        auto avg = oklab_to_rgb({sum[0], sum[1], sum[2]});
-        color.r = std::clamp(avg[0] * 255.0, 0.0, 255.0);
-        color.g = std::clamp(avg[1] * 255.0, 0.0, 255.0);
-        color.b = std::clamp(avg[2] * 255.0, 0.0, 255.0);
+    for (uint32_t material_i = 0; material_i < MaterialType::_COUNT_; ++material_i) {
+        auto const &material_info = per_material_infos[material_i];
+        for (uint32_t in_palette_i = 0; in_palette_i < material_info.slot_count; ++in_palette_i) {
+            auto &sum = per_material_per_cluster_sum[material_i][in_palette_i];
+            sum[0] /= sum[3];
+            sum[1] /= sum[3];
+            sum[2] /= sum[3];
+            auto &color = palette.color[material_info.slot_offset + in_palette_i + 1];
+            auto avg = oklab_to_rgb({sum[0], sum[1], sum[2]});
+            color.r = std::clamp(avg[0] * 255.0, 0.0, 255.0);
+            color.g = std::clamp(avg[1] * 255.0, 0.0, 255.0);
+            color.b = std::clamp(avg[2] * 255.0, 0.0, 255.0);
+        }
     }
 
     return result;
 }
 
-void write_magicavoxel_model(std::string_view filename, std::span<VoxelModel> in_models) {
+void write_magicavoxel_model(std::string_view filename, std::span<const VoxelModel> in_models) {
     ogt_vox_scene scene{};
 
     ogt_vox_group group{};
@@ -353,4 +383,39 @@ void write_magicavoxel_model(std::string_view filename, std::span<VoxelModel> in
 
     for (auto const *model : models)
         delete model;
+}
+
+void write_teardown_level(std::string_view level_name, std::span<const Model> models) {
+    auto xml_str = std::string{};
+
+    auto level_pos = std::array<float, 3>{0, 0, 0};
+    auto level_rot = std::array<float, 3>{0, 0, 0};
+
+    auto level_filepath = std::format("MOD/script/{}.xml", level_name);
+    xml_str += "<prefab version=\"1.6.0\">\n";
+    xml_str += std::format(
+        "<group name=\"instance={}.xml\" pos=\"{} {} {}\" rot=\"{} {} {}\">\n",
+        level_filepath,
+        level_pos[0], level_pos[1], level_pos[2],
+        level_rot[0], level_rot[1], level_rot[2]);
+
+    for (auto const &model : models) {
+        auto model_filepath = std::format("MOD/brush/{}.vox", model.name);
+
+        xml_str += std::format(
+            "<voxbox tags=\"{}\" pos=\"{} {} {}\" rot=\"{} {} {}\" size=\"{} {} {}\" brush=\"{}\"/>",
+            level_name,
+            model.pos[0], model.pos[1], model.pos[2],
+            model.rot[0], model.rot[1], model.rot[2],
+            model.size[0], model.size[1], model.size[2],
+            model_filepath);
+
+        write_magicavoxel_model(model_filepath, std::span(&model.voxel_model, 1));
+    }
+
+    xml_str += "</group>\n</prefab>\n";
+
+    auto *write_ptr = fopen(level_filepath.data(), "wb");
+    fwrite(xml_str.data(), xml_str.size(), 1, write_ptr);
+    fclose(write_ptr);
 }
