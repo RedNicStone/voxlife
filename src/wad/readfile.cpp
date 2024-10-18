@@ -76,7 +76,12 @@ namespace voxlife::wad {
             const header *header;
         };
 
-        std::unordered_map<std::string_view, const void*, case_insensitive_hash, case_insensitive_equal> entries;
+        struct entry {
+            const void* data;
+            size_t size;
+        };
+
+        std::unordered_map<std::string_view, entry, case_insensitive_hash, case_insensitive_equal> entries;
     };
 
     void index_entries(wad_info &info) {
@@ -90,7 +95,7 @@ namespace voxlife::wad {
             if (entry.compressed)
                 throw std::runtime_error("Compressed entries are not supported");
 
-            info.entries[entry.name] = info.file_data + entry.offset;
+            info.entries[entry.name] = { info.file_data + entry.offset, entry.size };
         }
     }
 
@@ -174,7 +179,17 @@ namespace voxlife::wad {
         if (it == info.entries.end())
             return nullptr;
 
-        return it->second;
+        return it->second.data;
+    }
+
+    size_t get_entry_size(wad_handle handle, std::string_view name) {
+        auto& info = reinterpret_cast<wad_info&>(*handle);
+
+        auto it = info.entries.find(name);
+        if (it == info.entries.end())
+            return 0;
+
+        return it->second.size;
     }
 
 }

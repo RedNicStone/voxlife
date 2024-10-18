@@ -6,11 +6,12 @@
 
 namespace voxlife::wad {
 
-  typedef struct wad_handle_T *wad_handle;
+    typedef struct wad_handle_T *wad_handle;
 
-  void open_file(std::string_view filename, wad_handle* handle);
+    void open_file(std::string_view filename, wad_handle* handle);
 
-  const void* get_entry(wad_handle handle, std::string_view name);
+    const void* get_entry(wad_handle handle, std::string_view name);
+    size_t get_entry_size(wad_handle handle, std::string_view name);
 
 }
 
