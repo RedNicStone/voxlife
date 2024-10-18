@@ -82,15 +82,38 @@ void rasterizer::rasterize_polygon(std::span<glm::vec2> points) {
     std::vector<std::pair<uint32_t, uint32_t>> line_indices;
     line_indices.resize(points.size());
 
-    // Generate line indices
-    std::generate(line_indices.begin(), line_indices.end(), [index = 0u]() mutable -> std::pair<uint32_t, uint32_t> {
-        index++;
-        return {index - 1, index};
-    });
-    line_indices.back() = {points.size() - 1, 0};
+    // Determine the signed area of the polygon
+    float signed_area = 0.0f;
+    for (auto it = points.begin(); it != points.end() - 1; ++it) {
+        auto first_point = *it;
+        auto second_point = *(it + 1);
+
+        signed_area += first_point.x * second_point.y - second_point.x * first_point.y;
+    }
+    signed_area += points.back().x * points.front().y - points.front().x * points.back().y;
+
+    // Reverse the line indices if the winding order is CCW
+    if (signed_area < 0.0f) {
+        // Generate forward line indices
+        std::generate(line_indices.begin(), line_indices.end() - 1,
+                      [index = 0ul]() mutable -> std::pair<uint32_t, uint32_t> {
+                          index++;
+                          return {index - 1, index};
+                      });
+        line_indices.back() = { points.size() - 1, 0 };
+    } else {
+        // Generate backward line indices
+        line_indices.front() = { 0, points.size() - 1 };
+        std::generate(line_indices.begin() + 1, line_indices.end(),
+                      [index = points.size()]() mutable -> std::pair<uint32_t, uint32_t> {
+                          index--;
+                          return { index, index - 1 };
+                      });
+    }
 
     // Remove points that are on the same line
-    line_indices.erase(std::remove_if(line_indices.begin(), line_indices.end(), [&](const auto pair) {
+    line_indices.erase(std::remove_if(line_indices.begin(), line_indices.end(),
+                                      [&](const auto pair) {
         auto first_point = points[pair.first];
         auto second_point = points[pair.second];
 
@@ -100,50 +123,30 @@ void rasterizer::rasterize_polygon(std::span<glm::vec2> points) {
         return false;
     }), line_indices.end());
 
-    // Determine winding order
-    float winding_order = std::accumulate(line_indices.begin(), line_indices.end(), 0.0f,
-                                          [&](float winding, const auto pair) {
-                                              auto first_point = points[pair.first];
-                                              auto second_point = points[pair.second];
-
-                                              return (second_point.x - first_point.x) *
-                                                     (second_point.y + first_point.y);
-                                          });
-
-    if (winding_order < 0.0f) {
-        std::reverse(line_indices.begin(), line_indices.end());
-        std::for_each(line_indices.begin(), line_indices.end(), [&](auto &pair) {
-            std::swap(pair.first, pair.second);
-        });
-    }
-
     // Find the lowest and highest point in the polygon for the front section
     const auto [min_first_point, max_first_point] = std::minmax_element(line_indices.begin(), line_indices.end(),
                                                                         [&](const std::pair<uint32_t, uint32_t> &a,
                                                                             const std::pair<uint32_t, uint32_t> &b) {
-                                                                            return points[a.first].y <
-                                                                                   points[b.first].y;
-                                                                        });
+        return points[a.first].y < points[b.first].y;
+    });
 
     // Find the lowest and highest point in the polygon for the front section
     const auto [min_second_point, max_second_point] = std::minmax_element(line_indices.begin(), line_indices.end(),
                                                                           [&](const std::pair<uint32_t, uint32_t> &a,
                                                                               const std::pair<uint32_t, uint32_t> &b) {
-                                                                              return points[a.second].y <
-                                                                                     points[b.second].y;
-                                                                          });
+        return points[a.second].y < points[b.second].y;
+    });
 
     const float min_y = points[min_first_point->first].y;
     const float max_y = points[max_first_point->first].y;
 
     // Number of scan lines needed to cover the polygon
-    const uint32_t iterations_y = std::min(static_cast<uint32_t>(std::round(max_y) - std::round(min_y)) + 1,
+    const uint32_t iterations_y = std::min(static_cast<uint32_t>(std::round(max_y) - std::round(min_y)),
                                            grid_info.height);
 
     // The minimum and maximum area required to cover the polygon
     const float grid_min_x = grid_info.origin.x + 0.5f;
-    const float grid_max_x = grid_min_x + static_cast<float>(grid_info.width - 1);
-    const float grid_min_y = std::max(std::round(min_y) + 0.5f, grid_info.origin.y + 0.5f);
+    const float grid_min_y = std::max(std::round(min_y) + 0.5f, std::round(grid_info.origin.y) + 0.5f);
     const auto grid_width_minus_one = static_cast<float>(grid_info.width - 1);
 
     // This iterator can iterate in either direction, wrapping at the end of the range
@@ -195,9 +198,8 @@ void rasterizer::rasterize_polygon(std::span<glm::vec2> points) {
         const auto line_min = static_cast<uint32_t>(std::min(std::max(line_front, 0.0f), grid_width_minus_one));
         const auto line_max = static_cast<uint32_t>(std::min(std::max(line_back, 0.0f), grid_width_minus_one));
 
-        if (line_min > line_max)
-            [[unlikely]]  // This should never happen in a convex polygon
-                    throw std::runtime_error("Line min is greater than line max");
+        if (line_min > line_max) [[unlikely]]  // This should never happen in a convex polygon
+            throw std::runtime_error("Line min is greater than line max");
 
         interpolation_info info{};
         info.front_point_1_index = front_indices.first;
