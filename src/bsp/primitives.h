@@ -85,7 +85,7 @@ namespace voxlife::bsp {
     // BSP lumps
 
     // Entities
-    struct entity {
+    struct lump_entity {
         constexpr static uint32_t max_key_value_pairs = 32;
         constexpr static uint32_t max_value = 1024;
 
@@ -98,7 +98,7 @@ namespace voxlife::bsp {
     };
 
     // Planes
-    struct plane {
+    struct lump_plane {
         glm::vec3 normal;
         float dist;
 
@@ -113,12 +113,12 @@ namespace voxlife::bsp {
     };
 
     // Textures
-    struct texture_header {
+    struct lump_texture_header {
         uint32_t mip_texture_count;
         // Followed by int32_t * mip_texture_count offsets which point to structures of texture
     };
 
-    struct mip_texture {
+    struct lump_mip_texture {
         constexpr static uint32_t max_texture_name = 16;
         constexpr static uint32_t mip_levels = 4;
 
@@ -128,13 +128,13 @@ namespace voxlife::bsp {
     };
 
     // Vertices
-    using vertex = glm::vec3;
+    using lump_vertex = glm::vec3;
 
     // Visibility
     // Purposefully omitted
 
     // Nodes
-    struct node {
+    struct lump_node {
         uint32_t plane;
         int16_t children[2];
         int16_t min[3], max[3];
@@ -142,7 +142,7 @@ namespace voxlife::bsp {
     };
 
     // Texinfo
-    struct texture_info {
+    struct lump_texture_info {
         glm::vec3 s;
         float shift_s;
         glm::vec3 t;
@@ -155,7 +155,7 @@ namespace voxlife::bsp {
     };
 
     // Faces
-    struct face {
+    struct lump_face {
         uint16_t plane;
         uint16_t side;
         uint32_t first_edge;    // index into edge lumps
@@ -166,20 +166,20 @@ namespace voxlife::bsp {
     };
 
     // Lighting
-    struct light_texel {
+    struct lump_light_texel {
         uint8_t red;
         uint8_t green;
         uint8_t blue;
     };
 
     // Clipnodes
-    struct clip_node {
+    struct lump_clip_node {
         int32_t plane;          // index into plane lumps
         int16_t children[2];
     };
 
     // Leafs
-    struct leaf {
+    struct lump_leaf {
         enum contents : int32_t {
             CONTENTS_EMPTY          = -1,
             CONTENTS_SOLID          = -2,
@@ -205,22 +205,22 @@ namespace voxlife::bsp {
     };
 
     // Marksurfaces
-    struct mark_surface {
+    struct lump_mark_surface {
         uint16_t face;      // index into face lumps
     };
 
     // Edges
-    struct edge {
+    struct lump_edge {
         uint16_t vertex[2]; // index into vertices lump
     };
 
     // Surfedges
-    struct surf_edge {
+    struct lump_surf_edge {
         int32_t edge;       // index into edge lumps
     };
 
     // Models
-    struct model {
+    struct lump_model {
         constexpr static uint32_t max_map_hulls = 4;
         glm::vec3 min, max;                // bounding box
         glm::vec3 origin;                  // coordinates of model origin
