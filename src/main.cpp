@@ -4,6 +4,7 @@
 
 #include <iostream>
 
+extern void raster_test(voxlife::bsp::bsp_handle handle);
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -16,5 +17,8 @@ int main(int argc, char *argv[]) {
 
     voxlife::bsp::bsp_handle bsp_handle;
     voxlife::bsp::open_file(argv[1], wad_handle, &bsp_handle);
+
+    raster_test(bsp_handle);
+
     return 0;
 }
