@@ -5,6 +5,7 @@
 #include <string_view>
 #include <span>
 #include <array>
+#include <glm/vec3.hpp>
 
 enum MaterialType : uint8_t {
     AIR,
@@ -22,31 +23,25 @@ enum MaterialType : uint8_t {
     DIRT,
     GRASS,
     GLASS,
-    _COUNT_,
+    MATERIAL_TYPE_MAX,
 };
 
 struct Voxel {
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
-    MaterialType type;
+    glm::u8vec3 color;
+    MaterialType material = MaterialType::AIR;
 };
 
 struct VoxelModel {
-    std::span<Voxel> voxels;
-    int pos_x;
-    int pos_y;
-    int pos_z;
-    uint32_t size_x;
-    uint32_t size_y;
-    uint32_t size_z;
+    std::span<const Voxel> voxels;
+    glm::i32vec3 pos;
+    glm::u32vec3 size;
 };
 
 struct Model {
-    std::string_view name;    // the name it should have when saved as a .vox file
-    std::array<float, 3> pos; // relative to the scene
-    std::array<float, 3> rot;
-    std::array<int, 3> size;
+    std::string_view name;  // the name it should have when saved as a .vox file
+    glm::vec3 pos;          // relative to the scene
+    glm::vec3 rot;
+    glm::u32vec3 size;
     VoxelModel voxel_model;
 };
 

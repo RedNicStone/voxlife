@@ -16,303 +16,245 @@
 #include <array>
 #include <algorithm>
 #include <fstream>
+#include <random>
+#include <unordered_set>
+#include <glm/geometric.hpp>
 
-auto rgb_to_oklab(std::array<double, 3> rgb) -> std::array<double, 3> {
+auto rgb_to_oklab(glm::vec3 rgb) -> glm::vec3 {
     // Normalize the RGB values to the range [0, 1]
+#pragma unroll 3
     for (int i = 0; i < 3; ++i)
-        rgb[i] = rgb[i] / 255.0;
+        rgb[i] /= 255.0f;
     // Convert to the XYZ color space
-    std::array<double, 3> xyz;
-    xyz[0] = 0.4124564 * rgb[0] + 0.3575761 * rgb[1] + 0.1804375 * rgb[2];
-    xyz[1] = 0.2126729 * rgb[0] + 0.7151522 * rgb[1] + 0.0721750 * rgb[2];
-    xyz[2] = 0.0193339 * rgb[0] + 0.1191920 * rgb[1] + 0.9503041 * rgb[2];
+    glm::vec3 xyz;
+    xyz[0] = 0.4124564f * rgb[0] + 0.3575761f * rgb[1] + 0.1804375f * rgb[2];
+    xyz[1] = 0.2126729f * rgb[0] + 0.7151522f * rgb[1] + 0.0721750f * rgb[2];
+    xyz[2] = 0.0193339f * rgb[0] + 0.1191920f * rgb[1] + 0.9503041f * rgb[2];
     // Normalize XYZ
-    double x = xyz[0] / 0.95047f; // D65 white point
-    double y = xyz[1] / 1.0f;
-    double z = xyz[2] / 1.08883f;
+    float x = xyz[0] / 0.95047f; // D65 white point
+    float y = xyz[1] / 1.0f;
+    float z = xyz[2] / 1.08883f;
     // Convert to Oklab
-    double l = 0.210454 * x + 0.793617 * y - 0.004072 * z;
-    double a = 1.977665 * x - 0.510530 * y - 0.447580 * z;
-    double b = 0.025334 * x + 0.338572 * y - 0.602190 * z;
-    return {l, a, b};
+    float l = 0.210454f * x + 0.793617f * y - 0.004072f * z;
+    float a = 1.977665f * x - 0.510530f * y - 0.447580f * z;
+    float b = 0.025334f * x + 0.338572f * y - 0.602190f * z;
+    return { l, a, b };
 }
 
-auto oklab_to_rgb(std::array<double, 3> oklab) -> std::array<double, 3> {
+auto oklab_to_rgb(glm::vec3 oklab) -> glm::vec3 {
     // Convert to XYZ
-    std::array<double, 3> xyz;
-    xyz[0] = +0.44562442079 * oklab[0] + 0.46266924383 * oklab[1] - 0.34689397498 * oklab[2];
-    xyz[1] = +1.14528157354 * oklab[0] - 0.12294697715 * oklab[1] + 0.08363642948 * oklab[2];
-    xyz[2] = +0.66266414585 * oklab[0] - 0.04966064087 * oklab[1] - 1.62817592248 * oklab[2];
+    glm::vec3 xyz;
+    xyz[0] = +0.44562442079f * oklab[0] + 0.46266924383f * oklab[1] - 0.34689397498f * oklab[2];
+    xyz[1] = +1.14528157354f * oklab[0] - 0.12294697715f * oklab[1] + 0.08363642948f * oklab[2];
+    xyz[2] = +0.66266414585f * oklab[0] - 0.04966064087f * oklab[1] - 1.62817592248f * oklab[2];
     // Un-normalize XYZ
-    double x = xyz[0] * 0.95047f; // D65 white point
-    double y = xyz[1] * 1.0f;
-    double z = xyz[2] * 1.08883f;
+    float x = xyz[0] * 0.95047f; // D65 white point
+    float y = xyz[1] * 1.0f;
+    float z = xyz[2] * 1.08883f;
     // Convert to the RGB color space
-    std::array<double, 3> rgb;
-    rgb[0] = 3.2404542 * x + -1.5371385 * y + -0.4985314 * z;
-    rgb[1] = -0.9692660 * x + 1.8760108 * y + 0.0415560 * z;
-    rgb[2] = 0.0556434 * x + -0.2040259 * y + 1.0572252 * z;
+    glm::vec3 rgb;
+    rgb[0] =  3.2404542f * x - 1.5371385f * y - 0.4985314f * z;
+    rgb[1] = -0.9692660f * x + 1.8760108f * y + 0.0415560f * z;
+    rgb[2] =  0.0556434f * x - 0.2040259f * y + 1.0572252f * z;
+    // Bring back into range [0, 255]
+#pragma unroll 3
+    for (int i = 0; i < 3; ++i)
+        rgb[i] *= 255.0f;
     return rgb;
 }
 
-struct Point {
-    std::array<double, 3> coordinates;
-    int cluster_id; // Assigned cluster ID
-    Point(const std::array<double, 3> &coords, int id = -1) : coordinates(coords), cluster_id(id) {}
+struct MaterialTypeSlot {
+    uint32_t slot_count;
+    uint32_t slot_offset;
 };
 
-// Function to compute the squared Euclidean distance between two points
-double squaredEuclideanDistance(const Point &a, const Point &b) {
-    double distance = 0.0;
-    for (size_t i = 0; i < a.coordinates.size(); ++i) {
-        double diff = a.coordinates[i] - b.coordinates[i];
-        distance += diff * diff;
-    }
-    return distance;
-}
-// Function to compute the Euclidean distance between two points
-double euclideanDistance(const Point &a, const Point &b) {
-    return std::sqrt(squaredEuclideanDistance(a, b));
+constexpr std::array<MaterialTypeSlot, MATERIAL_TYPE_MAX> material_type_slots {{
+    {0, 0},    // AIR
+    {16, 224}, // UN_PHYSICAL
+    {8, 176},  // HARD_MASONRY
+    {8, 168},  // HARD_METAL
+    {16, 152}, // PLASTIC
+    {16, 136}, // HEAVY_METAL
+    {16, 120}, // WEAK_METAL
+    {16, 104}, // PLASTER
+    {16, 88},  // BRICK
+    {16, 72},  // CONCRETE
+    {16, 56},  // WOOD
+    {16, 40},  // ROCK
+    {16, 24},  // DIRT
+    {16, 8},   // GRASS
+    {8, 0},    // GLASS
+}};
+
+struct MaterialData {
+    std::unordered_map<uint32_t, size_t> color_to_index;  // Packed RGB color to unique color index
+    std::vector<glm::u8vec3> unique_colors;               // Unique RGB colors
+    std::vector<std::pair<size_t, size_t>> voxel_indices; // Pairs of (model index, voxel index)
+    std::vector<size_t> voxel_color_indices;              // Unique color index per voxel
+    std::vector<glm::vec3> unique_oklab_colors;           // Oklab colors
+    std::vector<int> cluster_assignments;                 // Cluster index per unique color
+    std::vector<glm::vec3> cluster_centers;               // Centroids in Oklab space
+    std::vector<glm::u8vec3> palette_entries;             // Final palette entries in RGB
+};
+
+inline uint32_t pack_rgb(const glm::u8vec3& color) {
+    return (static_cast<uint32_t>(color.r) << 16) |
+           (static_cast<uint32_t>(color.g) << 8)  |
+            static_cast<uint32_t>(color.b);
 }
 
-void hierarchicalClustering(std::vector<Point> &points, int k) {
-    int n = points.size();
-    if (n == 0 || k <= 0 || k > n)
+void kmeans(const std::vector<glm::vec3>& data_points, size_t k,
+            std::vector<int>& assignments, std::vector<glm::vec3>& centroids,
+            int max_iterations = 100) {
+    size_t n = data_points.size();
+    assignments.resize(n);
+    centroids.resize(k);
+
+    if (n <= static_cast<size_t>(k)) {
+        for (size_t i = 0; i < n; ++i) {
+            assignments[i] = static_cast<int>(i);
+            centroids[i] = data_points[i];
+        }
         return;
-
-    // Initialize each point to its own cluster
-    for (int i = 0; i < n; ++i) {
-        points[i].cluster_id = i;
     }
 
-    // Precompute the distance matrix
-    std::vector<std::vector<double>> distance_matrix(n, std::vector<double>(n, 0.0));
-    for (int i = 0; i < n; ++i) {
-        for (int j = i + 1; j < n; ++j) {
-            double dist = euclideanDistance(points[i], points[j]);
-            distance_matrix[i][j] = dist;
-            distance_matrix[j][i] = dist;
-        }
-    }
+    std::vector<size_t> indices(n);
+    std::iota(indices.begin(), indices.end(), 0);
+    std::mt19937 rng(std::random_device{}());
+    std::shuffle(indices.begin(), indices.end(), rng);
 
-    // Clusters represented as sets of point indices
-    std::vector<std::set<int>> clusters(n);
-    for (int i = 0; i < n; ++i) {
-        clusters[i].insert(i);
-    }
+    for (int i = 0; i < k; ++i)
+        centroids[i] = data_points[indices[i]];
 
-    int current_cluster_count = n;
-    while (current_cluster_count > k) {
-        double min_distance = std::numeric_limits<double>::max();
-        int cluster_a = -1, cluster_b = -1;
-
-        // Find the two closest clusters
-        for (int i = 0; i < n; ++i) {
-            if (clusters[i].empty())
-                continue;
-            for (int j = i + 1; j < n; ++j) {
-                if (clusters[j].empty())
-                    continue;
-
-                // Use single linkage (minimum distance between clusters)
-                double dist = std::numeric_limits<double>::max();
-                for (int p1 : clusters[i]) {
-                    for (int p2 : clusters[j]) {
-                        dist = std::min(dist, distance_matrix[p1][p2]);
-                    }
-                }
-
-                if (dist < min_distance) {
-                    min_distance = dist;
-                    cluster_a = i;
-                    cluster_b = j;
-                }
-            }
-        }
-
-        // Merge the two closest clusters
-        if (cluster_a != -1 && cluster_b != -1) {
-            clusters[cluster_a].insert(clusters[cluster_b].begin(), clusters[cluster_b].end());
-            clusters[cluster_b].clear();
-            current_cluster_count--;
-        } else {
-            break; // No more clusters can be merged
-        }
-    }
-
-    // Assign cluster IDs based on the clusters formed
-    int cluster_id = 0;
-    for (const auto &cluster : clusters) {
-        if (cluster.empty())
-            continue;
-        for (int idx : cluster) {
-            points[idx].cluster_id = cluster_id;
-        }
-        cluster_id++;
-    }
-}
-
-void kMeans(std::vector<Point> &points, int k, int max_iterations = 100) {
-    if (points.empty() || k <= 0)
-        return;
-
-    size_t dimensions = points[0].coordinates.size();
-    std::vector<Point> centroids;
-
-    // Initialize centroids by randomly selecting k unique points from the dataset
-    // std::srand(std::time(0));
-    std::vector<int> used_indices;
-    for (int i = 0; i < k; ++i) {
-        int idx;
-        do {
-            idx = std::rand() % points.size();
-        } while (std::find(used_indices.begin(), used_indices.end(), idx) != used_indices.end());
-        used_indices.push_back(idx);
-        centroids.push_back(points[idx]);
-    }
-
-    bool changed;
+    std::vector<glm::vec3> new_centroids(k);
+    std::vector<int> counts(k);
+    bool changed = true;
     int iterations = 0;
-    do {
-        changed = false;
 
-        // Assignment step: Assign each point to the nearest centroid
-        for (auto &point : points) {
-            double min_distance = std::numeric_limits<double>::max();
-            int closest_cluster = -1;
-            for (int i = 0; i < k; ++i) {
-                double distance = squaredEuclideanDistance(point, centroids[i]);
+    while (changed && iterations < max_iterations) {
+        changed = false;
+        ++iterations;
+
+#pragma omp parallel for schedule(static)
+        for (size_t i = 0; i < n; ++i) {
+            const glm::vec3& point = data_points[i];
+            float min_distance = std::numeric_limits<float>::max();
+            int best_cluster = -1;
+            for (int j = 0; j < k; ++j) {
+                float distance = glm::dot(point - centroids[j], point - centroids[j]);
                 if (distance < min_distance) {
                     min_distance = distance;
-                    closest_cluster = i;
+                    best_cluster = j;
                 }
             }
-            if (point.cluster_id != closest_cluster) {
-                point.cluster_id = closest_cluster;
+            if (assignments[i] != best_cluster) {
+                assignments[i] = best_cluster;
                 changed = true;
             }
         }
 
-        // Update step: Recalculate centroids as the mean of assigned points
-        std::vector<std::array<double, 3>> new_centroids(k, std::array<double, 3>{});
-        std::vector<int> points_per_cluster(k, 0);
-        for (const auto &point : points) {
-            int cluster = point.cluster_id;
-            for (size_t d = 0; d < dimensions; ++d) {
-                new_centroids[cluster][d] += point.coordinates[d];
-            }
-            points_per_cluster[cluster] += 1;
+        std::fill(new_centroids.begin(), new_centroids.end(), glm::vec3(0.0f));
+        std::fill(counts.begin(), counts.end(), 0);
+
+#pragma omp parallel for schedule(static)
+        for (size_t i = 0; i < n; ++i) {
+            int cluster = assignments[i];
+#pragma omp atomic
+            counts[cluster] += 1;
+#pragma omp critical
+            new_centroids[cluster] += data_points[i];
         }
 
-        // Avoid division by zero and update centroids
-        for (int i = 0; i < k; ++i) {
-            if (points_per_cluster[i] == 0)
-                continue;
-            for (size_t d = 0; d < dimensions; ++d) {
-                new_centroids[i][d] /= points_per_cluster[i];
-            }
-            centroids[i].coordinates = new_centroids[i];
+        for (int j = 0; j < k; ++j) {
+            if (counts[j] > 0)
+                centroids[j] = new_centroids[j] / static_cast<float>(counts[j]);
+            else
+                centroids[j] = data_points[rng() % n];
         }
-
-        ++iterations;
-    } while (changed && iterations < max_iterations);
+    }
 }
 
-auto generate_palette(std::span<const VoxelModel> in_models) -> std::pair<ogt_vox_palette, std::vector<std::vector<uint8_t>>> {
-    auto result = std::pair<ogt_vox_palette, std::vector<std::vector<uint8_t>>>{};
-    auto &[palette, model_voxels] = result;
+auto generate_palette(std::span<const VoxelModel> models) -> std::pair<ogt_vox_palette, std::vector<std::vector<uint8_t>>> {
+    std::array<MaterialData, MaterialType::MATERIAL_TYPE_MAX> materials_data;
 
-    std::array<std::vector<Point>, MaterialType::_COUNT_> per_material_points{};
+    for (size_t model_idx = 0; model_idx < models.size(); ++model_idx) {
+        const VoxelModel& model = models[model_idx];
+        for (size_t voxel_idx = 0; voxel_idx < model.voxels.size(); ++voxel_idx) {
+            const Voxel& voxel = model.voxels[voxel_idx];
+            MaterialType material = voxel.material;
+            auto& mat_data = materials_data[material];
 
-    for (auto const &model : in_models) {
-        for (auto &points : per_material_points)
-            points.reserve(points.size() + model.voxels.size());
-        for (auto const &voxel : model.voxels) {
-            if (voxel.type == MaterialType::AIR)
-                continue;
-            auto pt = std::array<double, 3>{};
-            pt[0] = static_cast<double>(voxel.r);
-            pt[1] = static_cast<double>(voxel.g);
-            pt[2] = static_cast<double>(voxel.b);
-            per_material_points[voxel.type].push_back(Point(rgb_to_oklab(pt)));
+            mat_data.voxel_indices.emplace_back(model_idx, voxel_idx);
+
+            const uint32_t packed_color = pack_rgb(voxel.color);
+
+            auto it = mat_data.color_to_index.find(packed_color);
+            size_t color_index;
+            if (it == mat_data.color_to_index.end()) {
+                color_index = mat_data.unique_colors.size();
+                mat_data.unique_colors.push_back(voxel.color);
+                mat_data.color_to_index[packed_color] = color_index;
+            } else
+                color_index = it->second;
+
+            mat_data.voxel_color_indices.push_back(color_index);
         }
     }
 
-    struct MaterialTypeInfo {
-        uint32_t slot_count;
-        uint32_t slot_offset;
-    };
-    auto per_material_infos = std::array<MaterialTypeInfo, MaterialType::_COUNT_>{
-        MaterialTypeInfo{.slot_count = 0, .slot_offset = 0},    // AIR
-        MaterialTypeInfo{.slot_count = 16, .slot_offset = 224}, // UN_PHYSICAL
-        MaterialTypeInfo{.slot_count = 8, .slot_offset = 176},  // HARD_MASONRY
-        MaterialTypeInfo{.slot_count = 8, .slot_offset = 168},  // HARD_METAL
-        MaterialTypeInfo{.slot_count = 16, .slot_offset = 152}, // PLASTIC
-        MaterialTypeInfo{.slot_count = 16, .slot_offset = 136}, // HEAVY_METAL
-        MaterialTypeInfo{.slot_count = 16, .slot_offset = 120}, // WEAK_METAL
-        MaterialTypeInfo{.slot_count = 16, .slot_offset = 104}, // PLASTER
-        MaterialTypeInfo{.slot_count = 16, .slot_offset = 88},  // BRICK
-        MaterialTypeInfo{.slot_count = 16, .slot_offset = 72},  // CONCRETE
-        MaterialTypeInfo{.slot_count = 16, .slot_offset = 56},  // WOOD
-        MaterialTypeInfo{.slot_count = 16, .slot_offset = 40},  // ROCK
-        MaterialTypeInfo{.slot_count = 16, .slot_offset = 24},  // DIRT
-        MaterialTypeInfo{.slot_count = 16, .slot_offset = 8},   // GRASS
-        MaterialTypeInfo{.slot_count = 8, .slot_offset = 0},    // GLASS
-    };
+    std::pair<ogt_vox_palette, std::vector<std::vector<uint8_t>>> model_data;
+    auto &color_palette = model_data.first;
+    auto &model_indices = model_data.second;
 
-    std::vector<std::vector<std::array<double, 4>>> per_material_per_cluster_sum{};
-    per_material_per_cluster_sum.resize(MaterialType::_COUNT_);
-    for (uint32_t i = 0; i < per_material_points.size(); ++i) {
-        per_material_per_cluster_sum[i].resize(per_material_infos[i].slot_count);
-        kMeans(per_material_points[i], per_material_infos[i].slot_count);
-    }
+    model_indices.resize(models.size());
+    for (size_t i = 0; i < models.size(); ++i)
+        model_indices[i].resize(models[i].voxels.size());
 
-    model_voxels.resize(in_models.size());
-    std::array<uint32_t, MaterialType::_COUNT_> per_material_point_i = {};
+#pragma omp parallel for schedule(dynamic)
+    for (int material = 0; material < MaterialType::MATERIAL_TYPE_MAX; ++material) {
+        auto& mat_data = materials_data[material];
+        const auto& mat_info = material_type_slots[material];
 
-    for (uint32_t model_i = 0; model_i < in_models.size(); ++model_i) {
-        auto const &model = in_models[model_i];
-        auto &voxels = model_voxels[model_i];
+        if (mat_data.unique_colors.empty() || mat_info.slot_count == 0)
+            continue;
 
-        voxels.resize(model.size_x * model.size_y * model.size_z);
+        const size_t num_unique_colors = mat_data.unique_colors.size();
 
-        for (uint32_t voxel_i = 0; voxel_i < model.voxels.size(); ++voxel_i) {
-            auto const &voxel = model.voxels[voxel_i];
-            if (voxel.type == MaterialType::AIR) {
-                voxels[voxel_i] = 0;
-                continue;
-            }
-            auto &point_i = per_material_point_i[voxel.type];
-            auto const &material_info = per_material_infos[voxel.type];
-            auto const &point = per_material_points[voxel.type][point_i];
-            voxels[voxel_i] = material_info.slot_offset + point.cluster_id + 1;
+        mat_data.unique_oklab_colors.resize(num_unique_colors);
+        for (size_t i = 0; i < num_unique_colors; ++i) {
+            glm::vec3 rgb = glm::vec3(mat_data.unique_colors[i]) / 255.0f;
+            mat_data.unique_oklab_colors[i] = rgb_to_oklab(rgb);
+        }
 
-            auto &sum = per_material_per_cluster_sum[voxel.type][point.cluster_id];
-            sum[0] += point.coordinates[0]; // static_cast<double>((voxel >> 0) & 0xff);
-            sum[1] += point.coordinates[1]; // static_cast<double>((voxel >> 8) & 0xff);
-            sum[2] += point.coordinates[2]; // static_cast<double>((voxel >> 16) & 0xff);
-            sum[3] += 1;
+        int k = static_cast<int>(mat_info.slot_count);
+        kmeans(mat_data.unique_oklab_colors, k, mat_data.cluster_assignments, mat_data.cluster_centers);
 
-            ++point_i;
+        mat_data.palette_entries.resize(k);
+        for (int i = 0; i < k; ++i) {
+            glm::vec3 rgb = oklab_to_rgb(mat_data.cluster_centers[i]);
+            rgb = glm::clamp(rgb * 255.0f, 0.0f, 255.0f);
+            mat_data.palette_entries[i] = glm::u8vec3(rgb);
+        }
+
+        for (size_t i = 0; i < mat_data.voxel_indices.size(); ++i) {
+            const auto& voxel_idx_pair = mat_data.voxel_indices[i];
+            const size_t model_idx = voxel_idx_pair.first;
+            const size_t voxel_idx = voxel_idx_pair.second;
+            const size_t color_idx = mat_data.voxel_color_indices[i];
+            const int cluster_idx = mat_data.cluster_assignments[color_idx];
+
+            uint32_t palette_index = mat_info.slot_offset + cluster_idx;
+            model_indices[model_idx][voxel_idx] = palette_index;
+        }
+
+        for (int i = 0; i < k; ++i) {
+            color_palette.color[mat_info.slot_offset + i].r = mat_data.palette_entries[i].r;
+            color_palette.color[mat_info.slot_offset + i].g = mat_data.palette_entries[i].g;
+            color_palette.color[mat_info.slot_offset + i].b = mat_data.palette_entries[i].b;
+            color_palette.color[mat_info.slot_offset + i].a = 255;
         }
     }
 
-    for (uint32_t material_i = 0; material_i < MaterialType::_COUNT_; ++material_i) {
-        auto const &material_info = per_material_infos[material_i];
-        for (uint32_t in_palette_i = 0; in_palette_i < material_info.slot_count; ++in_palette_i) {
-            auto &sum = per_material_per_cluster_sum[material_i][in_palette_i];
-            sum[0] /= sum[3];
-            sum[1] /= sum[3];
-            sum[2] /= sum[3];
-            auto &color = palette.color[material_info.slot_offset + in_palette_i + 1];
-            auto avg = oklab_to_rgb({sum[0], sum[1], sum[2]});
-            color.r = std::clamp(avg[0] * 255.0, 0.0, 255.0);
-            color.g = std::clamp(avg[1] * 255.0, 0.0, 255.0);
-            color.b = std::clamp(avg[2] * 255.0, 0.0, 255.0);
-        }
-    }
-
-    return result;
+    return model_data;
 }
 
 void write_magicavoxel_model(std::string_view filename, std::span<const VoxelModel> in_models) {
@@ -346,18 +288,18 @@ void write_magicavoxel_model(std::string_view filename, std::span<const VoxelMod
 
     for (int i = 0; i < in_models.size(); ++i) {
         auto *model = new ogt_vox_model{};
-        model->size_x = in_models[i].size_x;
-        model->size_y = in_models[i].size_y;
-        model->size_z = in_models[i].size_z;
+        model->size_x = in_models[i].size.x;
+        model->size_y = in_models[i].size.y;
+        model->size_z = in_models[i].size.z;
         model->voxel_data = voxels[i].data();
         models[i] = model;
 
         auto instance = ogt_vox_instance{};
         instance.name = "testinst";
         instance.transform = ogt_vox_transform_get_identity();
-        instance.transform.m30 = static_cast<float>(in_models[i].pos_x);
-        instance.transform.m31 = static_cast<float>(in_models[i].pos_y);
-        instance.transform.m32 = static_cast<float>(in_models[i].pos_z);
+        instance.transform.m30 = static_cast<float>(in_models[i].pos.x);
+        instance.transform.m31 = static_cast<float>(in_models[i].pos.y);
+        instance.transform.m32 = static_cast<float>(in_models[i].pos.z);
         instance.model_index = i;
         instance.layer_index = 0;
         instance.group_index = 0;
@@ -403,7 +345,7 @@ void write_teardown_level(std::string_view level_name, std::span<const Model> mo
         auto model_filepath = std::format("MOD/brush/{}.vox", model.name);
 
         xml_str += std::format(
-            "<voxbox tags=\"{}\" pos=\"{} {} {}\" rot=\"{} {} {}\" size=\"{} {} {}\" brush=\"{}\"/>",
+            R"(<voxbox tags="{}" pos="{} {} {}" rot="{} {} {}" size="{} {} {}" brush="{}"/>)",
             level_name,
             model.pos[0], model.pos[1], model.pos[2],
             model.rot[0], model.rot[1], model.rot[2],
