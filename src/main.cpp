@@ -13,7 +13,11 @@ int main(int argc, char *argv[]) {
     }
 
     voxlife::wad::wad_handle wad_handle;
+#if _WIN32
+    voxlife::wad::open_file("C:/Program Files (x86)/Steam/steamapps/common/Half-Life/valve/halflife.wad", &wad_handle);
+#else
     voxlife::wad::open_file("/mnt/int/games/linux/steamapps/common/Half-Life/valve/halflife.wad", &wad_handle);
+#endif
 
     voxlife::bsp::bsp_handle bsp_handle;
     voxlife::bsp::open_file(argv[1], wad_handle, &bsp_handle);

@@ -1,3 +1,4 @@
+#include <numeric>
 #define OGT_VOX_IMPLEMENTATION
 #include <ogt_vox.h>
 
@@ -5,20 +6,18 @@
 
 #include <vector>
 #include <cstdio>
-
-#include <iostream>
-#include <vector>
-#include <cmath>
 #include <limits>
-#include <set>
 #include <format>
 #include <span>
 #include <array>
 #include <algorithm>
-#include <fstream>
 #include <random>
-#include <unordered_set>
 #include <glm/geometric.hpp>
+#include <iostream>
+#include <cmath>
+#include <set>
+#include <fstream>
+#include <unordered_set>
 
 auto rgb_to_oklab(glm::vec3 rgb) -> glm::vec3 {
     // Normalize the RGB values to the range [0, 1]
@@ -38,7 +37,7 @@ auto rgb_to_oklab(glm::vec3 rgb) -> glm::vec3 {
     float l = 0.210454f * x + 0.793617f * y - 0.004072f * z;
     float a = 1.977665f * x - 0.510530f * y - 0.447580f * z;
     float b = 0.025334f * x + 0.338572f * y - 0.602190f * z;
-    return { l, a, b };
+    return {l, a, b};
 }
 
 auto oklab_to_rgb(glm::vec3 oklab) -> glm::vec3 {
@@ -53,9 +52,9 @@ auto oklab_to_rgb(glm::vec3 oklab) -> glm::vec3 {
     float z = xyz[2] * 1.08883f;
     // Convert to the RGB color space
     glm::vec3 rgb;
-    rgb[0] =  3.2404542f * x - 1.5371385f * y - 0.4985314f * z;
+    rgb[0] = 3.2404542f * x - 1.5371385f * y - 0.4985314f * z;
     rgb[1] = -0.9692660f * x + 1.8760108f * y + 0.0415560f * z;
-    rgb[2] =  0.0556434f * x - 0.2040259f * y + 1.0572252f * z;
+    rgb[2] = 0.0556434f * x - 0.2040259f * y + 1.0572252f * z;
     // Bring back into range [0, 255]
 #pragma unroll 3
     for (int i = 0; i < 3; ++i)
@@ -68,7 +67,7 @@ struct MaterialTypeSlot {
     uint32_t slot_offset;
 };
 
-constexpr std::array<MaterialTypeSlot, MATERIAL_TYPE_MAX> material_type_slots {{
+constexpr std::array<MaterialTypeSlot, MATERIAL_TYPE_MAX> material_type_slots{{
     {0, 0},    // AIR
     {16, 224}, // UN_PHYSICAL
     {8, 176},  // HARD_MASONRY
@@ -97,14 +96,14 @@ struct MaterialData {
     std::vector<glm::u8vec3> palette_entries;             // Final palette entries in RGB
 };
 
-inline uint32_t pack_rgb(const glm::u8vec3& color) {
+inline uint32_t pack_rgb(const glm::u8vec3 &color) {
     return (static_cast<uint32_t>(color.r) << 16) |
-           (static_cast<uint32_t>(color.g) << 8)  |
-            static_cast<uint32_t>(color.b);
+           (static_cast<uint32_t>(color.g) << 8) |
+           static_cast<uint32_t>(color.b);
 }
 
-void kmeans(const std::vector<glm::vec3>& data_points, size_t k,
-            std::vector<int>& assignments, std::vector<glm::vec3>& centroids,
+void kmeans(const std::vector<glm::vec3> &data_points, size_t k,
+            std::vector<int> &assignments, std::vector<glm::vec3> &centroids,
             int max_iterations = 100) {
     size_t n = data_points.size();
     assignments.resize(n);
@@ -136,8 +135,8 @@ void kmeans(const std::vector<glm::vec3>& data_points, size_t k,
         ++iterations;
 
 #pragma omp parallel for schedule(static)
-        for (size_t i = 0; i < n; ++i) {
-            const glm::vec3& point = data_points[i];
+        for (int i = 0; i < n; ++i) {
+            const glm::vec3 &point = data_points[i];
             float min_distance = std::numeric_limits<float>::max();
             int best_cluster = -1;
             for (int j = 0; j < k; ++j) {
@@ -157,7 +156,7 @@ void kmeans(const std::vector<glm::vec3>& data_points, size_t k,
         std::fill(counts.begin(), counts.end(), 0);
 
 #pragma omp parallel for schedule(static)
-        for (size_t i = 0; i < n; ++i) {
+        for (int i = 0; i < n; ++i) {
             int cluster = assignments[i];
 #pragma omp atomic
             counts[cluster] += 1;
@@ -178,11 +177,11 @@ auto generate_palette(std::span<const VoxelModel> models) -> std::pair<ogt_vox_p
     std::array<MaterialData, MaterialType::MATERIAL_TYPE_MAX> materials_data;
 
     for (size_t model_idx = 0; model_idx < models.size(); ++model_idx) {
-        const VoxelModel& model = models[model_idx];
+        const VoxelModel &model = models[model_idx];
         for (size_t voxel_idx = 0; voxel_idx < model.voxels.size(); ++voxel_idx) {
-            const Voxel& voxel = model.voxels[voxel_idx];
+            const Voxel &voxel = model.voxels[voxel_idx];
             MaterialType material = voxel.material;
-            auto& mat_data = materials_data[material];
+            auto &mat_data = materials_data[material];
 
             mat_data.voxel_indices.emplace_back(model_idx, voxel_idx);
 
@@ -211,8 +210,8 @@ auto generate_palette(std::span<const VoxelModel> models) -> std::pair<ogt_vox_p
 
 #pragma omp parallel for schedule(dynamic)
     for (int material = 0; material < MaterialType::MATERIAL_TYPE_MAX; ++material) {
-        auto& mat_data = materials_data[material];
-        const auto& mat_info = material_type_slots[material];
+        auto &mat_data = materials_data[material];
+        const auto &mat_info = material_type_slots[material];
 
         if (mat_data.unique_colors.empty() || mat_info.slot_count == 0)
             continue;
@@ -236,7 +235,7 @@ auto generate_palette(std::span<const VoxelModel> models) -> std::pair<ogt_vox_p
         }
 
         for (size_t i = 0; i < mat_data.voxel_indices.size(); ++i) {
-            const auto& voxel_idx_pair = mat_data.voxel_indices[i];
+            const auto &voxel_idx_pair = mat_data.voxel_indices[i];
             const size_t model_idx = voxel_idx_pair.first;
             const size_t voxel_idx = voxel_idx_pair.second;
             const size_t color_idx = mat_data.voxel_color_indices[i];
@@ -319,25 +318,28 @@ void write_magicavoxel_model(std::string_view filename, std::span<const VoxelMod
     auto *buffer_data = ogt_vox_write_scene(&scene, &buffer_size);
 
     auto *write_ptr = fopen(filename.data(), "wb");
-    fwrite(buffer_data, buffer_size, 1, write_ptr);
-    fclose(write_ptr);
+    if (write_ptr) {
+        fwrite(buffer_data, buffer_size, 1, write_ptr);
+        fclose(write_ptr);
+    } else {
+        std::cout << "Failed to open " << filename << " for writing. skipping..." << std::endl;
+    }
     ogt_vox_free(buffer_data);
 
     for (auto const *model : models)
         delete model;
 }
 
-void write_teardown_level(std::string_view level_name, std::span<const Model> models) {
+void write_teardown_level(std::string_view level_name, std::span<const Model> models, std::span<const Light> lights) {
     auto xml_str = std::string{};
 
     auto level_pos = std::array<float, 3>{0, 0, 0};
     auto level_rot = std::array<float, 3>{0, 0, 0};
 
-    auto level_filepath = std::format("MOD/script/{}.xml", level_name);
     xml_str += "<prefab version=\"1.6.0\">\n";
     xml_str += std::format(
-        "<group name=\"instance={}.xml\" pos=\"{} {} {}\" rot=\"{} {} {}\">\n",
-        level_filepath,
+        "<group name=\"instance=MOD/script/{}.xml\" pos=\"{} {} {}\" rot=\"{} {} {}\">\n",
+        level_name,
         level_pos[0], level_pos[1], level_pos[2],
         level_rot[0], level_rot[1], level_rot[2]);
 
@@ -345,19 +347,33 @@ void write_teardown_level(std::string_view level_name, std::span<const Model> mo
         auto model_filepath = std::format("MOD/brush/{}.vox", model.name);
 
         xml_str += std::format(
-            R"(<voxbox tags="{}" pos="{} {} {}" rot="{} {} {}" size="{} {} {}" brush="{}"/>)",
+            R"(<voxbox name="{}" tags="{}" pos="{:.3f} {:.3f} {:.3f}" rot="{:.3f} {:.3f} {:.3f}" size="{} {} {}" brush="{}"/>)"
+            "\n",
+            model_filepath,
             level_name,
-            model.pos[0], model.pos[1], model.pos[2],
-            model.rot[0], model.rot[1], model.rot[2],
-            model.size[0], model.size[1], model.size[2],
+            model.pos.x, model.pos.y, model.pos.z,
+            model.rot.x, model.rot.y, model.rot.z,
+            model.size.x, model.size.y, model.size.z,
             model_filepath);
+    }
 
-        write_magicavoxel_model(model_filepath, std::span(&model.voxel_model, 1));
+    for (auto const &light : lights) {
+        xml_str += std::format(
+            "<light pos=\"{} {} {}\" color=\"{} {} {}\" scale=\"{}\"/>"
+            "\n",
+            light.pos.x, light.pos.y, light.pos.z,
+            float(light.color.r) / 255.0f,
+            float(light.color.g) / 255.0f,
+            float(light.color.b) / 255.0f,
+            float(light.intensity) * 0.1f);
     }
 
     xml_str += "</group>\n</prefab>\n";
 
+    auto level_filepath = std::format("script/{}.xml", level_name);
     auto *write_ptr = fopen(level_filepath.data(), "wb");
-    fwrite(xml_str.data(), xml_str.size(), 1, write_ptr);
-    fclose(write_ptr);
+    if (write_ptr) {
+        fwrite(xml_str.data(), xml_str.size(), 1, write_ptr);
+        fclose(write_ptr);
+    }
 }

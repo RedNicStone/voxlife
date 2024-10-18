@@ -5,19 +5,18 @@
 
 #include <cmath>
 #include <iostream>
-
-#include <glm/geometric.hpp>
+#include <string>
 #include <format>
 
+#include <glm/geometric.hpp>
 
 using namespace voxlife::voxel;
 
-std::pair<std::vector<glm::vec2>, std::vector<float>> project_face(voxlife::bsp::face& face) {
+std::pair<std::vector<glm::vec2>, std::vector<float>> project_face(voxlife::bsp::face &face) {
     constexpr float teardown_scale = 0.1f;  // Teardown uses a scale of 10 units per meter
-    constexpr float hammer_scale = 0.0254f;  // Hammer uses a scale of 1 unit is 1 inch
+    constexpr float hammer_scale = 0.0254f; // Hammer uses a scale of 1 unit is 1 inch
 
     constexpr float hammer_to_teardown_scale = hammer_scale / teardown_scale;
-
 
     std::vector<glm::vec2> points;
     std::vector<float> depths;
@@ -30,24 +29,24 @@ std::pair<std::vector<glm::vec2>, std::vector<float>> project_face(voxlife::bsp:
         glm::vec2 v;
         float depth;
         switch (face.facing) {
-            case voxlife::bsp::face::PLANE_X:
-            case voxlife::bsp::face::PLANE_ANYX:
-                v.x = vertex.y;
-                v.y = vertex.z;
-                depth = vertex.x;
-                break;
-            case voxlife::bsp::face::PLANE_Y:
-            case voxlife::bsp::face::PLANE_ANYY:
-                v.x = vertex.z;
-                v.y = vertex.x;
-                depth = vertex.y;
-                break;
-            case voxlife::bsp::face::PLANE_Z:
-            case voxlife::bsp::face::PLANE_ANYZ:
-                v.x = vertex.x;
-                v.y = vertex.y;
-                depth = vertex.z;
-                break;
+        case voxlife::bsp::face::PLANE_X:
+        case voxlife::bsp::face::PLANE_ANYX:
+            v.x = vertex.y;
+            v.y = vertex.z;
+            depth = vertex.x;
+            break;
+        case voxlife::bsp::face::PLANE_Y:
+        case voxlife::bsp::face::PLANE_ANYY:
+            v.x = vertex.z;
+            v.y = vertex.x;
+            depth = vertex.y;
+            break;
+        case voxlife::bsp::face::PLANE_Z:
+        case voxlife::bsp::face::PLANE_ANYZ:
+            v.x = vertex.x;
+            v.y = vertex.y;
+            depth = vertex.z;
+            break;
         }
 
         points.push_back(v);
@@ -57,7 +56,34 @@ std::pair<std::vector<glm::vec2>, std::vector<float>> project_face(voxlife::bsp:
     return {points, depths};
 }
 
-std::vector<glm::vec2> compute_face_uvs(voxlife::bsp::face& face) {
+glm::vec3 unswizzle_vertex(voxlife::bsp::face::type facing, glm::vec3 xy_depth) {
+    glm::vec2 v = {xy_depth.x, xy_depth.y};
+    float depth = xy_depth.z;
+    glm::vec3 vertex;
+    switch (facing) {
+    case voxlife::bsp::face::PLANE_X:
+    case voxlife::bsp::face::PLANE_ANYX:
+        vertex.y = v.x;
+        vertex.z = v.y;
+        vertex.x = depth;
+        break;
+    case voxlife::bsp::face::PLANE_Y:
+    case voxlife::bsp::face::PLANE_ANYY:
+        vertex.z = v.x;
+        vertex.x = v.y;
+        vertex.y = depth;
+        break;
+    case voxlife::bsp::face::PLANE_Z:
+    case voxlife::bsp::face::PLANE_ANYZ:
+        vertex.x = v.x;
+        vertex.y = v.y;
+        vertex.z = depth;
+        break;
+    }
+    return {-vertex.x, vertex.z, vertex.y};
+}
+
+std::vector<glm::vec2> compute_face_uvs(voxlife::bsp::face &face) {
     std::vector<glm::vec2> uvs;
     uvs.reserve(face.vertices.size());
 
@@ -71,7 +97,7 @@ std::vector<glm::vec2> compute_face_uvs(voxlife::bsp::face& face) {
     return uvs;
 }
 
-template<typename T>
+template <typename T>
 T bilinear_sample(glm::vec2 uv, glm::u32vec2 size, std::span<T> data) {
     uv = glm::fract(uv);
     glm::vec2 scaled_uv = uv * glm::vec2(size - glm::u32vec2(1, 1));
@@ -97,7 +123,7 @@ T bilinear_sample(glm::vec2 uv, glm::u32vec2 size, std::span<T> data) {
     return glm::mix(glm::mix(Q00, Q01, sub_texel.x), glm::mix(Q10, Q11, sub_texel.x), sub_texel.y);
 }
 
-bool voxelize_face(voxlife::bsp::bsp_handle handle, voxlife::bsp::face& face, uint32_t face_index) {
+bool voxelize_face(voxlife::bsp::bsp_handle handle, voxlife::bsp::face& face, uint32_t face_index, Model& out_model) {
     auto [points, depths] = project_face(face);
     auto uvs = compute_face_uvs(face);
 
@@ -133,8 +159,8 @@ bool voxelize_face(voxlife::bsp::bsp_handle handle, voxlife::bsp::face& face, ui
         return false;
     }
 
-    //if (grid_info.width == 1 || grid_info.height == 1 || depth == 1)
-    //    return false;
+    // if (grid_info.width == 1 || grid_info.height == 1 || depth == 1)
+    //     return false;
 
     rasterizer_handle rasterizer;
     create_rasterizer(grid_info, &rasterizer);
@@ -180,21 +206,46 @@ bool voxelize_face(voxlife::bsp::bsp_handle handle, voxlife::bsp::face& face, ui
     }
 
     model.voxels = std::span(voxels);
+    out_model.name = std::format("{}", face_index);
+    const float CM_TO_METERS = 0.1;
+    out_model.pos = unswizzle_vertex(face.facing, glm::vec3(min_x, min_y, min_z)) * CM_TO_METERS;
+    out_model.size = {model.size.x, model.size.z, model.size.y};
+    out_model.rot = {0, 0, 0};
 
-    write_magicavoxel_model(std::format("models/{}.vox", face_index), std::span(&model, 1));
+    switch (face.facing) {
+    case voxlife::bsp::face::PLANE_X:
+    case voxlife::bsp::face::PLANE_ANYX:
+        // out_model.rot = {-90, 0, 0};
+        break;
+    case voxlife::bsp::face::PLANE_Y:
+    case voxlife::bsp::face::PLANE_ANYY:
+        // out_model.rot = {0, 90, 90};
+        break;
+    case voxlife::bsp::face::PLANE_Z:
+    case voxlife::bsp::face::PLANE_ANYZ:
+        // out_model.rot = {0, -90, 0};
+        break;
+    }
+
+    write_magicavoxel_model(std::format("brush/{}.vox", face_index), std::span(&model, 1));
     return true;
 }
 
-
 void raster_test(voxlife::bsp::bsp_handle handle) {
     auto faces = voxlife::bsp::get_model_faces(handle, 0);
+    std::vector<Model> models;
+    models.reserve(faces.size());
 
     uint32_t count = 0;
     for (auto& face : faces) {
         try {
-            voxelize_face(handle, face, count++);
+            models.push_back({});
+            voxelize_face(handle, face, count++, models.back());
         } catch (std::exception& e) {
             std::cerr << e.what() << std::endl;
         }
     }
+
+    std::vector<Light> lights;
+    write_teardown_level("test", models, lights);
 }

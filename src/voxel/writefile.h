@@ -38,15 +38,20 @@ struct VoxelModel {
 };
 
 struct Model {
-    std::string_view name;  // the name it should have when saved as a .vox file
-    glm::vec3 pos;          // relative to the scene
+    std::string name; // the name it should have when saved as a .vox file
+    glm::vec3 pos;    // relative to the scene
     glm::vec3 rot;
     glm::u32vec3 size;
-    VoxelModel voxel_model;
+};
+
+struct Light {
+    glm::vec3 pos;
+    glm::u8vec3 color;
+    float intensity;
 };
 
 void write_magicavoxel_model(std::string_view filename, std::span<const VoxelModel> in_models);
 
-void write_teardown_level(std::string_view level_name, std::span<const Model> models);
+void write_teardown_level(std::string_view level_name, std::span<const Model> models, std::span<const Light> lights);
 
 #endif // VOXLIFE_VOXEL_WRITEFILE_H
