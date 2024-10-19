@@ -2,7 +2,7 @@
 #define OGT_VOX_IMPLEMENTATION
 #include <ogt_vox.h>
 
-#include <voxel/writefile.h>
+#include <voxel/write_file.h>
 
 #include <vector>
 #include <cstdio>

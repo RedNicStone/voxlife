@@ -1,6 +1,6 @@
 
-#ifndef VOXLIFE_READFILE_INFO_H
-#define VOXLIFE_READFILE_INFO_H
+#ifndef VOXLIFE_READ_FILE_INFO_H
+#define VOXLIFE_READ_FILE_INFO_H
 
 #include <bsp/primitives.h>
 #include <wad/readfile.h>
@@ -59,4 +59,4 @@ namespace voxlife::bsp {
 }
 
 
-#endif //VOXLIFE_READFILE_INFO_H
+#endif //VOXLIFE_READ_FILE_INFO_H

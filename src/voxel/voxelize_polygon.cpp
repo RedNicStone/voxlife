@@ -1,7 +1,7 @@
 
 #include <voxel/rasterize_polygon.h>
-#include <voxel/writefile.h>
-#include <bsp/readfile.h>
+#include <voxel/write_file.h>
+#include <bsp/read_file.h>
 #include <hl1/read_entities.h>
 
 #include <cmath>

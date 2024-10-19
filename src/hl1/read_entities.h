@@ -3,7 +3,7 @@
 #define VOXLIFE_READ_ENTITIES_H
 
 #include <hl1/entities.h>
-#include <bsp/readfile.h>
+#include <bsp/read_file.h>
 
 #include <string_view>
 #include <vector>
