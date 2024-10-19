@@ -52,8 +52,13 @@ struct Light {
     float intensity;
 };
 
+struct ExtraInfo {
+    glm::vec3 spawn_pos;
+    glm::vec3 spawn_rot;
+};
+
 void write_magicavoxel_model(std::string_view filename, std::span<const VoxelModel> in_models);
 
-void write_teardown_level(std::string_view level_name, std::span<const Model> models, std::span<const Light> lights);
+void write_teardown_level(std::string_view level_name, std::span<const Model> models, std::span<const Light> lights, const ExtraInfo &info);
 
 #endif // VOXLIFE_VOXEL_WRITEFILE_H

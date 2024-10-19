@@ -7,6 +7,7 @@
 #include <iostream>
 #include <string>
 #include <format>
+#include <algorithm>
 
 #include <glm/geometric.hpp>
 
@@ -21,6 +22,8 @@ constexpr float teardown_scale = 0.1f;  // Teardown uses a scale of 10 units per
 constexpr float hammer_scale = 0.0254f; // Hammer uses a scale of 1 unit is 1 inch
 
 constexpr float hammer_to_teardown_scale = hammer_scale / teardown_scale;
+constexpr float teardown_to_hammer_scale = teardown_scale / hammer_scale;
+constexpr float decimeter_to_meter = 0.1;
 
 std::vector<glm::vec3> convert_coordinates(std::span<glm::vec3> points) {
     /*
@@ -198,8 +201,8 @@ bool voxelize_face(voxlife::bsp::bsp_handle handle, voxlife::bsp::face& face, ui
     grid_info.height = static_cast<uint32_t>(std::round(projected_max.y) - std::round(projected_min.y));
     grid_info.origin = glm::vec2{ std::round(projected_min.x), std::round(projected_min.y) };
 
-    std::cout << "Voxelizing face with " << face.vertices.size() << " vertices" << std::endl;
-    std::cout << "Model dimensions: " << grid_info.width << " x " << grid_info.height << " x " << depth << std::endl;
+    // std::cout << "Voxelizing face with " << face.vertices.size() << " vertices" << std::endl;
+    // std::cout << "Model dimensions: " << grid_info.width << " x " << grid_info.height << " x " << depth << std::endl;
     if (grid_info.width > 256 || grid_info.height > 256 || depth > 256) {
         std::cout << "Failed as object is too large for magicavoxel model" << std::endl;
         return false;
@@ -275,7 +278,6 @@ bool voxelize_face(voxlife::bsp::bsp_handle handle, voxlife::bsp::face& face, ui
 
     model.voxels = std::span(voxels);
     out_model.name = std::format("{}", face_index);
-    constexpr float decimeter_to_meter = 0.1;
     out_model.size = glm::xzy(model.size);
     out_model.pos = (glm::round(world_min) + glm::vec3(0.5f)) * decimeter_to_meter;
 
@@ -313,6 +315,20 @@ void raster_test(voxlife::bsp::bsp_handle handle) {
         }
     }
 
+    auto entities = voxlife::bsp::get_entities(handle);
     std::vector<Light> lights;
-    write_teardown_level("test", models, lights);
+
+    for (auto const &light_entity : entities.lights) {
+        lights.push_back({
+            .pos = glm::vec3(glm::xzy(light_entity.origin)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter),
+            .color = light_entity.color,
+            .intensity = float(light_entity.intensity) * (hammer_to_teardown_scale * decimeter_to_meter * 20) / light_entity.fade,
+        });
+    }
+
+    ExtraInfo info;
+    info.spawn_pos = glm::vec3(glm::xzy(entities.player_start.origin)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter);
+    info.spawn_rot = glm::vec3(0, entities.player_start.angle + 90, 0);
+
+    write_teardown_level("test", models, lights, info);
 }

@@ -94,6 +94,7 @@ namespace voxlife::bsp {
             std::string_view value;
         };
 
+        std::string_view classname;
         std::vector<key_value_pair> key_value;
     };
 
