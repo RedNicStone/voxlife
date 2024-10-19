@@ -148,7 +148,7 @@ void rasterizer::rasterize_polygon(std::span<glm::vec2> points) {
     // The minimum and maximum area required to cover the polygon
     const float grid_min_x = grid_info.origin.x + 0.5f;
     const float grid_min_y = std::max(std::round(min_y) + 0.5f, std::round(grid_info.origin.y) + 0.5f);
-    const auto grid_width_minus_one = static_cast<float>(grid_info.width - 1);
+    const auto grid_width = static_cast<float>(grid_info.width);
 
     // This iterator can iterate in either direction, wrapping at the end of the range
     using forward_wrapping_view = forward_wrapping_view<decltype(line_indices)::iterator>;
@@ -196,8 +196,8 @@ void rasterizer::rasterize_polygon(std::span<glm::vec2> points) {
         const float line_front = front_intersection.value() - grid_min_x;
         const float line_back = back_intersection.value() - grid_min_x;
 
-        const auto line_min = static_cast<uint32_t>(std::min(std::max(line_front, 0.0f), grid_width_minus_one));
-        const auto line_max = static_cast<uint32_t>(std::min(std::max(line_back, 0.0f), grid_width_minus_one));
+        const auto line_min = static_cast<uint32_t>(std::min(std::max(line_front, 0.0f), grid_width));
+        const auto line_max = static_cast<uint32_t>(std::min(std::max(line_back, 0.0f), grid_width));
 
         if (line_min > line_max) [[unlikely]]  // This should never happen in a convex polygon
             throw std::runtime_error("Line min is greater than line max");

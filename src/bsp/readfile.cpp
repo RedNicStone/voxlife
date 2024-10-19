@@ -247,8 +247,13 @@ namespace voxlife::bsp {
 
     texture get_texture_data(bsp_handle handle, uint32_t texture_id) {
         auto& info = *reinterpret_cast<bsp_info*>(handle);
-        auto& texture = info.loaded_textures.at(texture_id);
 
+        if (texture_id < info.loaded_textures.size()) {
+            auto& texture = info.loaded_textures[texture_id];
+            return { texture.data, texture.size };
+        }
+
+        auto& texture = info.loaded_textures.front();
         return { texture.data, texture.size };
     }
 
@@ -262,6 +267,7 @@ namespace voxlife::bsp {
         auto face_span = safe_subspan(info.faces, root_model.first_face, root_model.face_count);
         bsp_faces.insert(bsp_faces.end(), face_span.begin(), face_span.end());
 
+        /*
         std::stack<lump_node> node_stack;
         node_stack.push(root_node);
 
@@ -287,7 +293,7 @@ namespace voxlife::bsp {
                 }
 
                 leaf_count++;
-                auto& leaf = span_at(info.leafs, -child_node);
+                auto& leaf = span_at(info.leafs, -child_node - 1);
                 mark_surfaces = safe_subspan(info.mark_surfaces, leaf.first_mark_surface, leaf.mark_surface_count);
 
                 face_count += leaf.mark_surface_count;
@@ -298,7 +304,7 @@ namespace voxlife::bsp {
                     bsp_faces.push_back(face);
                 }
             }
-        }
+        }*/
 
         std::vector<face> faces;
 

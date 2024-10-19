@@ -68,21 +68,22 @@ struct MaterialTypeSlot {
 };
 
 constexpr std::array<MaterialTypeSlot, MATERIAL_TYPE_MAX> material_type_slots{{
-    {0, 0},    // AIR
-    {16, 224}, // UN_PHYSICAL
-    {8, 176},  // HARD_MASONRY
-    {8, 168},  // HARD_METAL
-    {16, 152}, // PLASTIC
-    {16, 136}, // HEAVY_METAL
-    {16, 120}, // WEAK_METAL
-    {16, 104}, // PLASTER
-    {16, 88},  // BRICK
-    {16, 72},  // CONCRETE
-    {16, 56},  // WOOD
-    {16, 40},  // ROCK
-    {16, 24},  // DIRT
-    {16, 8},   // GRASS
-    {8, 0},    // GLASS
+    {0,    0},  // AIR
+    {16, 224},  // UN_PHYSICAL
+    {8,  176},  // HARD_MASONRY
+    {8,  168},  // HARD_METAL
+    {16, 152},  // PLASTIC
+    {16, 136},  // HEAVY_METAL
+    {16, 120},  // WEAK_METAL
+    {16, 104},  // PLASTER
+    {16,  88},  // BRICK
+    {16,  72},  // CONCRETE
+    {16,  56},  // WOOD
+    {16,  40},  // ROCK
+    {16,  24},  // DIRT
+    {16,   8},  // GRASS
+    {8,    0},  // GLASS
+    {253,  1},  // MATERIAL_ALL_TYPES
 }};
 
 struct MaterialData {
@@ -181,6 +182,9 @@ auto generate_palette(std::span<const VoxelModel> models) -> std::pair<ogt_vox_p
         for (size_t voxel_idx = 0; voxel_idx < model.voxels.size(); ++voxel_idx) {
             const Voxel &voxel = model.voxels[voxel_idx];
             MaterialType material = voxel.material;
+            if (material == MaterialType::AIR)
+                continue;
+
             auto &mat_data = materials_data[material];
 
             mat_data.voxel_indices.emplace_back(model_idx, voxel_idx);

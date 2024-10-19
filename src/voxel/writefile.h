@@ -6,6 +6,7 @@
 #include <span>
 #include <array>
 #include <glm/vec3.hpp>
+#include <string>
 
 enum MaterialType : uint8_t {
     AIR,
@@ -23,6 +24,7 @@ enum MaterialType : uint8_t {
     DIRT,
     GRASS,
     GLASS,
+    MATERIAL_ALL_TYPES,
     MATERIAL_TYPE_MAX,
 };
 
