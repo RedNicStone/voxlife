@@ -6,6 +6,9 @@
 #define VOXLIFE_ENTITIES_H
 
 #include <string_view>
+#include <vector>
+#include <variant>
+#include <glm/vec3.hpp>
 
 
 namespace voxlife::hl1 {
@@ -228,6 +231,8 @@ namespace voxlife::hl1 {
         xen_spore_medium,
         xen_spore_small,
         xen_tree,
+
+        CLASSNAME_TYPE_MAX
     };
 
     constexpr const char* classname_names[] = {
@@ -450,11 +455,62 @@ namespace voxlife::hl1 {
         "xen_tree",
     };
 
-    struct entity {
-        classname_type classname;
-        std::string_view targetname;
-        std::string_view target;
+    enum class parameter_type {
+        classname,
+        origin,
+        light,
+        style,
+        fade,
+        angle,
+        map,
+        landmark,
+        model,
+        PARAMETER_TYPE_MAX
     };
+
+    constexpr const char* parameter_names[] = {
+        "classname",
+        "origin",
+        "_light",
+        "style",
+        "_fade",
+        "angle",
+        "map",
+        "landmark",
+        "model",
+    };
+
+    struct entity_types {
+        struct light {
+            glm::ivec3 origin;
+            glm::u8vec3 color;
+            uint32_t intensity = 255;
+            uint32_t fade = 1;
+        };
+
+        struct info_player_start {
+            glm::ivec3 origin;
+            float angle;
+        };
+
+        struct trigger_changelevel {
+            std::string_view map;
+            std::string_view landmark;
+            std::string_view model;
+        };
+
+        struct info_landmark {
+            std::string_view targetname;
+            glm::ivec3 origin;
+        };
+    };
+
+    using entity = std::variant<
+            std::monostate,
+            entity_types::light,
+            entity_types::info_player_start,
+            entity_types::trigger_changelevel,
+            entity_types::info_landmark>;
 
 }
 

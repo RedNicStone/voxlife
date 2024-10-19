@@ -46,39 +46,18 @@ namespace voxlife::bsp {
         glm::u32vec2 size;
     };
 
-    struct light {
-        glm::ivec3 origin;
-        glm::u8vec3 color;
-        uint32_t intensity;
-        float fade;
-    };
+    struct entity {
+        struct key_value_pair {
+            std::string_view key;
+            std::string_view value;
+        };
 
-    struct info_player_start {
-        glm::ivec3 origin;
-        float angle;
-    };
-
-    struct trigger_changelevel {
-        std::string_view map;
-        std::string_view landmark;
-        uint32_t model_id;
-    };
-
-    struct info_landmark {
-        std::string_view targetname;
-        glm::ivec3 origin;
-    };
-
-    struct entities {
-        std::vector<light> lights;
-        std::vector<trigger_changelevel> changelevels;
-        std::vector<info_landmark> landmarks;
-        info_player_start player_start;
+        std::vector<key_value_pair> pairs;
     };
 
     std::vector<face> get_model_faces(bsp_handle handle, uint32_t model_id);
     texture get_texture_data(bsp_handle handle, uint32_t texture_id);
-    entities get_entities(bsp_handle handle);
+    std::vector<entity> get_entities(bsp_handle handle);
 }
 
 #endif //VOXLIFE_BSP_READFILE_H

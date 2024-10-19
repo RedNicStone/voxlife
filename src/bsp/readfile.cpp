@@ -1,6 +1,7 @@
 
 #include <bsp/readfile.h>
 #include <bsp/primitives.h>
+#include <bsp/readfile_info.h>
 
 #include <stdexcept>
 #include <format>
@@ -15,54 +16,12 @@
 #include <sys/fcntl.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <stack>
+
 #endif
 
 
 namespace voxlife::bsp {
-
-    struct bsp_info {
-#if defined(_WIN32)
-        HANDLE hFile;
-        HANDLE hMap;
-#else
-        int bsp_file = -1;
-#endif
-        size_t file_size = 0;
-
-        union {
-            const uint8_t *file_data = nullptr;
-            const header *header;
-        };
-
-        wad::wad_handle resources;
-
-        const void* lump_begins[lump_type::LUMP_MAX];
-        const void* lump_ends[lump_type::LUMP_MAX];
-
-        std::vector<lump_entity>           entities;
-        std::string_view                   entities_str;
-        std::span<const lump_plane>        planes;
-        std::span<const lump_mip_texture>  textures;
-        std::span<const lump_vertex>       vertices;
-        std::span<const lump_node>         nodes;
-        std::span<const lump_texture_info> texture_infos;
-        std::span<const lump_face>         faces;
-        std::span<const lump_clip_node>    clip_nodes;
-        std::span<const lump_leaf>         leafs;
-        std::span<const lump_mark_surface> mark_surfaces;
-        std::span<const lump_edge>         edges;
-        std::span<const lump_surf_edge>    surface_edges;
-        std::span<const lump_model>        models;
-
-        struct loaded_texture {
-            std::vector<glm::u8vec3> data;
-
-            glm::u32vec2 size;
-        };
-
-        std::vector<loaded_texture> loaded_textures;
-    };
-
 
     void parse_header(bsp_info &info) {
         if (info.header->version != header::bsp_version_halflife)
@@ -81,7 +40,7 @@ namespace voxlife::bsp {
         }
 
         info.entities_str  = std::string_view(reinterpret_cast<const char*>      (info.lump_begins[lump_type::LUMP_ENTITIES]),
-                                       reinterpret_cast<const char*>             (  info.lump_ends[lump_type::LUMP_ENTITIES]));
+                                              reinterpret_cast<const char*>      (  info.lump_ends[lump_type::LUMP_ENTITIES]));
         info.planes        = std::span(reinterpret_cast<const lump_plane*>       (info.lump_begins[lump_type::LUMP_PLANES]),
                                        reinterpret_cast<const lump_plane*>       (  info.lump_ends[lump_type::LUMP_PLANES]));
         info.textures      = std::span(reinterpret_cast<const lump_mip_texture*> (info.lump_begins[lump_type::LUMP_TEXTURES]),
@@ -106,58 +65,6 @@ namespace voxlife::bsp {
                                        reinterpret_cast<const lump_surf_edge*>   (  info.lump_ends[lump_type::LUMP_SURFEDGES]));
         info.models        = std::span(reinterpret_cast<const lump_model*>       (info.lump_begins[lump_type::LUMP_MODELS]),
                                        reinterpret_cast<const lump_model*>       (  info.lump_ends[lump_type::LUMP_MODELS]));
-
-        auto begin = info.entities_str.begin();
-        while (true) {
-            if (begin == info.entities_str.end())
-                break;
-            auto entity_beg = std::find(begin, info.entities_str.end(), '{');
-            if (entity_beg == info.entities_str.end())
-                break;
-            auto entity_end = std::find(begin, info.entities_str.end(), '}');
-            if (entity_end == info.entities_str.end())
-                break;
-            begin = entity_end + 1;
-
-            auto line_beg = std::find(entity_beg, entity_end, '\n');
-            if (line_beg == entity_end)
-                break;
-            line_beg += 1;
-
-            info.entities.emplace_back();
-            auto& entity = info.entities.back();
-            while (true) {
-                auto line_end = std::find(line_beg, entity_end, '\n');
-                if (line_end == entity_end)
-                    break;
-                auto line = std::string_view(line_beg, line_end + 1);
-                line_beg = line_end + 1;
-
-                auto tag_beg = std::find(line.begin(), line.end(), '\"');
-                if (tag_beg == line.end())
-                    continue;
-                auto tag_end = std::find(tag_beg + 1, line.end(), '\"');
-                if (tag_end == line.end())
-                    continue;
-                auto val_beg = std::find(tag_end + 1, line.end(), '\"');
-                if (val_beg == line.end())
-                    continue;
-                auto val_end = std::find(val_beg + 1, line.end(), '\"');
-                if (val_end == line.end())
-                    continue;
-
-                auto tag_str = std::string_view(tag_beg + 1, tag_end);
-                auto val_str = std::string_view(val_beg + 1, val_end);
-                if (tag_str == "classname") {
-                    entity.classname = val_str;
-                } else {
-                    entity.key_value.push_back({
-                        .key = tag_str,
-                        .value = val_str,
-                    });
-                }
-            }
-        }
     }
 
     template<typename T>
@@ -311,126 +218,6 @@ namespace voxlife::bsp {
 
         auto& texture = info.loaded_textures.front();
         return { texture.data, texture.size };
-    }
-
-    template<typename...Ts>
-    bool tag_values_from_chars(std::string_view value_str, Ts&...ts) {
-        auto beg = value_str.begin();
-        bool result = true;
-        int index = 0;
-        auto parse_single = [&](auto& x) {
-            index += 1;
-            bool is_last = index == sizeof...(Ts);
-            if (result == false)
-                return;
-            auto tag_end = std::find(beg, value_str.end(), ' ');
-            if (tag_end == value_str.end() && !is_last) {
-                result = false;
-                return;
-            }
-            auto x_str = std::string_view(beg, tag_end);
-            std::from_chars(x_str.data(), x_str.data() + x_str.size(), x);
-            if (!is_last)
-                beg = tag_end + 1;
-        };
-
-        (parse_single(ts), ...);
-
-        return result;
-    }
-
-    entities get_entities(bsp_handle handle) {
-        auto& info = *reinterpret_cast<bsp_info*>(handle);
-
-        entities result{};
-        bool seen_player_start = false;
-
-        for (auto const &entity : info.entities) {
-            bool parse_result = true;
-
-            if (entity.classname == "light") {
-                light light;
-                light.color = {};
-                light.intensity = {};
-                light.origin = {};
-                light.fade = 1.0f;
-
-                for (auto const &[key, value] : entity.key_value) {
-                    if (key == "origin") {
-                        parse_result &= tag_values_from_chars(value, light.origin.x, light.origin.y, light.origin.z);
-                    } else if (key == "_light") {
-                        if (!tag_values_from_chars(value, light.color.r, light.color.g, light.color.b, light.intensity)) {
-                            parse_result &= tag_values_from_chars(value, light.color.r, light.color.g, light.color.b);
-                            light.intensity = 255; // ?
-                        }
-                    } else if (key == "style") {
-                        if (value != "0" && value != "32" && value != "33") {
-                            parse_result = false;
-                        }
-                    } else if (key == "_fade") {
-                        parse_result &= tag_values_from_chars(value, light.fade);
-                    }
-                    // targetname, spawnflags...?
-
-                    if (!parse_result)
-                        break;
-                }
-
-                if (parse_result) {
-                    result.lights.push_back(light);
-                }
-            } else if (entity.classname == "info_player_start") {
-                if (seen_player_start) {
-                    // ignore all but first
-                    continue;
-                }
-                seen_player_start = true;
-                for (auto const &[key, value] : entity.key_value) {
-                    if (key == "origin") {
-                        parse_result &= tag_values_from_chars(value, result.player_start.origin.x, result.player_start.origin.y, result.player_start.origin.z);
-                    } else if (key == "angle") {
-                        parse_result &= tag_values_from_chars(value, result.player_start.angle);
-                    }
-                    // spawnflags...?
-                }
-            } else if (entity.classname == "trigger_changelevel") {
-                trigger_changelevel changelevel;
-                for (auto const &[key, value] : entity.key_value) {
-                    if (key == "model") {
-                        parse_result &= tag_values_from_chars(value, changelevel.model_id);
-                    } else if (key == "landmark") {
-                        changelevel.landmark = value;
-                    } else if (key == "map") {
-                        changelevel.map = value;
-                    }
-                }
-                result.changelevels.push_back(changelevel);
-            } else if (entity.classname == "info_landmark") {
-                glm::ivec3 origin;
-                std::string_view targetname;
-                for (auto const &[key, value] : entity.key_value) {
-                    if (key == "origin") {
-                        parse_result &= tag_values_from_chars(value, origin.x, origin.y, origin.z);
-                    } else if (key == "targetname") {
-                        targetname = value;
-                    }
-                }
-                result.landmarks.emplace_back(targetname, origin);
-            }
-
-            if (!parse_result) {
-                std::cout << std::format("---failed to parse {}---\n", entity.classname);
-                for (auto const &[key, value] : entity.key_value) {
-                    std::cout << key << " = " << value << "\n";
-                }
-            } else {
-                // std::cout << entity.classname << ":" << std::endl;
-                // for (auto const &[key, value] : entity.key_value) {
-                //     std::cout << "  - " << key << " = " << value << "\n";
-                // }
-            }
-        }
-        return result;
     }
 
     std::vector<face> get_model_faces(bsp_handle handle, uint32_t model_id) {

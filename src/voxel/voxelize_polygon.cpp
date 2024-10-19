@@ -2,6 +2,7 @@
 #include <voxel/rasterize_polygon.h>
 #include <voxel/writefile.h>
 #include <bsp/readfile.h>
+#include <hl1/read_entities.h>
 
 #include <cmath>
 #include <iostream>
@@ -315,32 +316,40 @@ void raster_test(voxlife::bsp::bsp_handle handle) {
         }
     }
 
-    auto entities = voxlife::bsp::get_entities(handle);
+    auto entities = voxlife::hl1::read_level(handle);
 
     std::vector<Light> lights;
-    for (auto const &light_entity : entities.lights) {
+    for (auto const &entity : entities.entities[static_cast<uint32_t>(voxlife::hl1::classname_type::light)]) {
+        auto& light_entity = std::get<voxlife::hl1::entity_types::light>(entity);
         lights.push_back({
             .pos = glm::vec3(glm::xzy(light_entity.origin)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter),
             .color = light_entity.color,
-            .intensity = float(light_entity.intensity) * (hammer_to_teardown_scale * decimeter_to_meter * 20) / light_entity.fade,
+            .intensity = static_cast<float>(light_entity.intensity) * (hammer_to_teardown_scale * decimeter_to_meter * 20),
         });
     }
 
     std::vector<Location> locations;
-    for (auto const &landmark : entities.landmarks) {
+    for (auto const &entity : entities.entities[static_cast<uint32_t>(voxlife::hl1::classname_type::info_landmark)]) {
+        auto& landmark = std::get<voxlife::hl1::entity_types::info_landmark>(entity);
         locations.push_back({
             .name = std::string(landmark.targetname),
             .pos = glm::vec3(glm::xzy(landmark.origin)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter),
         });
     }
 
+    auto& player_start_entities = entities.entities[static_cast<uint32_t>(voxlife::hl1::classname_type::info_player_start)];
+    if (player_start_entities.empty())
+        throw std::runtime_error("Could not find player start");
+
+    auto& player_start = std::get<voxlife::hl1::entity_types::info_player_start>(player_start_entities.front());
+
     LevelInfo info;
     info.name = "test";
     info.models = models;
     info.lights = lights;
     info.locations = locations;
-    info.spawn_pos = glm::vec3(glm::xzy(entities.player_start.origin)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter);
-    info.spawn_rot = glm::vec3(0, entities.player_start.angle + 90, 0);
+    info.spawn_pos = glm::vec3(glm::xzy(player_start.origin)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter);
+    info.spawn_rot = glm::vec3(0, player_start.angle + 90, 0);
 
     write_teardown_level(info);
 }
