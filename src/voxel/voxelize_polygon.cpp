@@ -271,7 +271,7 @@ bool voxelize_face(voxlife::bsp::bsp_handle handle, voxlife::bsp::face& face, ui
 
             auto voxel_depth = static_cast<uint32_t>(std::floor(depth_value)) - min_size.z;
             auto& voxel = voxels[voxel_depth * model.size.x * model.size.y + y * model.size.x + x];
-            voxel.material = WOOD;
+            voxel.material = WEAK_METAL;
             voxel.color = color;
         }
     }
@@ -316,8 +316,8 @@ void raster_test(voxlife::bsp::bsp_handle handle) {
     }
 
     auto entities = voxlife::bsp::get_entities(handle);
-    std::vector<Light> lights;
 
+    std::vector<Light> lights;
     for (auto const &light_entity : entities.lights) {
         lights.push_back({
             .pos = glm::vec3(glm::xzy(light_entity.origin)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter),
@@ -326,9 +326,21 @@ void raster_test(voxlife::bsp::bsp_handle handle) {
         });
     }
 
-    ExtraInfo info;
+    std::vector<Location> locations;
+    for (auto const &landmark : entities.landmarks) {
+        locations.push_back({
+            .name = std::string(landmark.targetname),
+            .pos = glm::vec3(glm::xzy(landmark.origin)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter),
+        });
+    }
+
+    LevelInfo info;
+    info.name = "test";
+    info.models = models;
+    info.lights = lights;
+    info.locations = locations;
     info.spawn_pos = glm::vec3(glm::xzy(entities.player_start.origin)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter);
     info.spawn_rot = glm::vec3(0, entities.player_start.angle + 90, 0);
 
-    write_teardown_level("test", models, lights, info);
+    write_teardown_level(info);
 }

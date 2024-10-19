@@ -58,8 +58,21 @@ namespace voxlife::bsp {
         float angle;
     };
 
+    struct trigger_changelevel {
+        std::string_view map;
+        std::string_view landmark;
+        uint32_t model_id;
+    };
+
+    struct info_landmark {
+        std::string_view targetname;
+        glm::ivec3 origin;
+    };
+
     struct entities {
         std::vector<light> lights;
+        std::vector<trigger_changelevel> changelevels;
+        std::vector<info_landmark> landmarks;
         info_player_start player_start;
     };
 

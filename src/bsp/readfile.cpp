@@ -379,9 +379,9 @@ namespace voxlife::bsp {
                 if (parse_result) {
                     result.lights.push_back(light);
                 }
-            }else if (entity.classname == "info_player_start") {
+            } else if (entity.classname == "info_player_start") {
                 if (seen_player_start) {
-                    std::cout << "BRUH BRUH BRUH more than one player spawn" << std::endl;
+                    // ignore all but first
                     continue;
                 }
                 seen_player_start = true;
@@ -393,6 +393,29 @@ namespace voxlife::bsp {
                     }
                     // spawnflags...?
                 }
+            } else if (entity.classname == "trigger_changelevel") {
+                trigger_changelevel changelevel;
+                for (auto const &[key, value] : entity.key_value) {
+                    if (key == "model") {
+                        parse_result &= tag_values_from_chars(value, changelevel.model_id);
+                    } else if (key == "landmark") {
+                        changelevel.landmark = value;
+                    } else if (key == "map") {
+                        changelevel.map = value;
+                    }
+                }
+                result.changelevels.push_back(changelevel);
+            } else if (entity.classname == "info_landmark") {
+                glm::ivec3 origin;
+                std::string_view targetname;
+                for (auto const &[key, value] : entity.key_value) {
+                    if (key == "origin") {
+                        parse_result &= tag_values_from_chars(value, origin.x, origin.y, origin.z);
+                    } else if (key == "targetname") {
+                        targetname = value;
+                    }
+                }
+                result.landmarks.emplace_back(targetname, origin);
             }
 
             if (!parse_result) {

@@ -334,7 +334,7 @@ void write_magicavoxel_model(std::string_view filename, std::span<const VoxelMod
         delete model;
 }
 
-void write_teardown_level(std::string_view level_name, std::span<const Model> models, std::span<const Light> lights, const ExtraInfo &info) {
+void write_teardown_level(const LevelInfo &info) {
     auto xml_str = std::string{};
 
     auto level_pos = std::array<float, 3>{0, 0, 0};
@@ -343,36 +343,32 @@ void write_teardown_level(std::string_view level_name, std::span<const Model> mo
     xml_str += "<prefab version=\"1.6.0\">\n";
     xml_str += std::format(
         "<group name=\"instance=MOD/script/{}.xml\" pos=\"{:.3f} {:.3f} {:.3f}\" rot=\"{:.3f} {:.3f} {:.3f}\">\n",
-        level_name,
+        info.name,
         level_pos[0], level_pos[1], level_pos[2],
         level_rot[0], level_rot[1], level_rot[2]);
 
     xml_str += std::format(
         R"(<spawnpoint tags="{}" pos="{:.3f} {:.3f} {:.3f}" rot="{:.3f} {:.3f} {:.3f}"/>)"
         "\n",
-        level_name,
+        info.name,
         info.spawn_pos.x, info.spawn_pos.y, info.spawn_pos.z,
         info.spawn_rot.x, info.spawn_rot.y, info.spawn_rot.z);
 
-    for (auto const &model : models) {
-        auto model_filepath = std::format("MOD/brush/{}.vox", model.name);
-
+    for (auto const &location : info.locations) {
         xml_str += std::format(
-            R"(<voxbox name="{}" tags="{}" pos="{:.3f} {:.3f} {:.3f}" rot="{:.3f} {:.3f} {:.3f}" size="{} {} {}" brush="{}"/>)"
+            R"(<location tags="{} {}" name="{}" pos="{} {} {}"/>)"
             "\n",
-            model_filepath,
-            level_name,
-            model.pos.x, model.pos.y, model.pos.z,
-            model.rot.x, model.rot.y, model.rot.z,
-            model.size.x, model.size.y, model.size.z,
-            model_filepath);
+            info.name,
+            location.name,
+            location.name,
+            location.pos.x, location.pos.y, location.pos.z);
     }
 
-    for (auto const &light : lights) {
+    for (auto const &light : info.lights) {
         xml_str += std::format(
             R"(<light tags="{}" pos="{} {} {}" color="{} {} {}" scale="{}"/>)"
             "\n",
-            level_name,
+            info.name,
             light.pos.x, light.pos.y, light.pos.z,
             float(light.color.r) / 255.0f,
             float(light.color.g) / 255.0f,
@@ -380,9 +376,23 @@ void write_teardown_level(std::string_view level_name, std::span<const Model> mo
             float(light.intensity) * 0.1f);
     }
 
+    for (auto const &model : info.models) {
+        auto model_filepath = std::format("MOD/brush/{}.vox", model.name);
+
+        xml_str += std::format(
+            R"(<voxbox name="{}" tags="{}" pos="{:.3f} {:.3f} {:.3f}" rot="{:.3f} {:.3f} {:.3f}" size="{} {} {}" brush="{}"/>)"
+            "\n",
+            model_filepath,
+            info.name,
+            model.pos.x, model.pos.y, model.pos.z,
+            model.rot.x, model.rot.y, model.rot.z,
+            model.size.x, model.size.y, model.size.z,
+            model_filepath);
+    }
+
     xml_str += "</group>\n</prefab>\n";
 
-    auto level_filepath = std::format("script/{}.xml", level_name);
+    auto level_filepath = std::format("script/{}.xml", info.name);
     auto *write_ptr = fopen(level_filepath.data(), "wb");
     if (write_ptr) {
         fwrite(xml_str.data(), xml_str.size(), 1, write_ptr);
