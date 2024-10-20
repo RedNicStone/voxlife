@@ -10,6 +10,7 @@
 #include <string_view>
 #include <span>
 #include <vector>
+#include <map>
 
 
 namespace voxlife::bsp {
@@ -51,6 +52,7 @@ namespace voxlife::bsp {
             glm::u32vec2 size;
         };
 
+        std::span<wad::wad_handle> resources;
         std::vector<loaded_texture> loaded_textures;
     };
 

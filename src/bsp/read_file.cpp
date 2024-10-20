@@ -3,12 +3,14 @@
 #include <bsp/primitives.h>
 #include <bsp/read_file_info.h>
 
+#include <cstring>
 #include <stdexcept>
 #include <format>
 #include <iostream>
 #include <fstream>
 #include <span>
 #include <charconv>
+#include <cstring>
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -16,8 +18,7 @@
 #include <sys/fcntl.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
-#include <stack>
-
+#include <sys/unistd.h>
 #endif
 
 
@@ -127,6 +128,7 @@ namespace voxlife::bsp {
 
     void load_textures(bsp_handle handle, std::span<wad::wad_handle> resources) {
         auto& info = *reinterpret_cast<bsp_info*>(handle);
+        info.resources = resources;
 
         auto* texture_lump_begin = reinterpret_cast<const uint8_t*>(info.lump_begins[lump_type::LUMP_TEXTURES]);
         auto* texture_lump_end = reinterpret_cast<const uint8_t*>(info.lump_ends[lump_type::LUMP_TEXTURES]);
@@ -224,6 +226,64 @@ namespace voxlife::bsp {
         }
     }
 
+    texture get_texture_data(bsp_handle handle, std::string_view texture_name) {
+        auto& info = *reinterpret_cast<bsp_info*>(handle);
+
+        // fast path: texture is part of the level and already loaded
+        uint32_t texture_id = get_texture_id(handle, texture_name);
+        if (texture_id && texture_id < info.loaded_textures.size()) {
+            auto& texture = info.loaded_textures[texture_id];
+            return { texture.data, texture.size };
+        }
+
+        // slow path: texture is not part of the level, load it
+        auto texture = lookup_texture(handle, texture_name, info.resources);
+        auto mip_texture = texture.first;
+        size_t texture_size = texture.second;
+
+        if (mip_texture == nullptr) {
+            //throw std::runtime_error(std::format("Could not find texture '{}'", mip_texture_handle->name));
+            std::cout << std::format("Could not find texture '{}'\n", texture_name);
+
+            auto& loaded_texture = info.loaded_textures.front();
+            return { loaded_texture.data, loaded_texture.size };
+        }
+
+        auto texture_data_end = mip_texture + texture_size;
+
+        auto mip_texture_handle = reinterpret_cast<const lump_mip_texture*>(mip_texture);
+
+        const uint32_t texel_count = mip_texture_handle->width * mip_texture_handle->height;
+        auto color_data = mip_texture + mip_texture_handle->offsets[3] + texel_count / 64 + 2;
+
+        if (color_data + 256 > texture_data_end)
+            throw std::runtime_error("Color data extends beyond end of lump");
+
+        const uint32_t texture_width  = mip_texture_handle->width;
+        const uint32_t texture_height = mip_texture_handle->height;
+        const uint8_t* texture_data = mip_texture + mip_texture_handle->offsets[0];
+
+        if (texture_data + texel_count > color_data)
+            throw std::runtime_error("Texture data extends beyond color data");
+
+        std::vector<glm::u8vec3> texture_data_vec(texel_count);
+
+        for (uint32_t y = 0; y < texture_height; ++y) {
+            for (uint32_t x = 0; x < texture_width; ++x) {
+                uint32_t pixel_index = y * texture_width + x;
+                uint8_t index = texture_data[pixel_index];
+                glm::u8vec3 texel;
+                texel.r = color_data[index * 3 + 0];
+                texel.g = color_data[index * 3 + 1];
+                texel.b = color_data[index * 3 + 2];
+                texture_data_vec[pixel_index] = texel;
+            }
+        }
+
+        auto& loaded_texture = info.loaded_textures.front();
+        return { loaded_texture.data, loaded_texture.size };
+    }
+
     texture get_texture_data(bsp_handle handle, uint32_t texture_id) {
         auto& info = *reinterpret_cast<bsp_info*>(handle);
 
@@ -234,6 +294,60 @@ namespace voxlife::bsp {
 
         auto& texture = info.loaded_textures.front();
         return { texture.data, texture.size };
+    }
+
+    std::string_view get_texture_name(bsp_handle handle, uint32_t texture_id) {
+        auto &info = *reinterpret_cast<bsp_info *>(handle);
+
+        auto* texture_lump_begin = reinterpret_cast<const uint8_t*>(info.lump_begins[lump_type::LUMP_TEXTURES]);
+        auto* texture_lump_end = reinterpret_cast<const uint8_t*>(info.lump_ends[lump_type::LUMP_TEXTURES]);
+
+        auto* texture_header = reinterpret_cast<const lump_texture_header*>(texture_lump_begin);
+        uint32_t texture_header_length = sizeof(lump_texture_header) + (texture_header->mip_texture_count - 1) * sizeof(uint32_t);
+        auto* texture_begin = texture_lump_begin + sizeof(lump_texture_header);
+        auto* texture_end = texture_lump_begin + texture_header_length;
+
+        if (texture_end > texture_lump_end)
+            throw std::runtime_error("Texture header extends beyond end of lump");
+
+        auto texture_indices = std::span<const uint32_t>(reinterpret_cast<const uint32_t*>(texture_begin), reinterpret_cast<const uint32_t*>(texture_header_length));
+        auto texture_index = span_at(texture_indices, texture_id);
+
+        auto *mip_texture_handle = reinterpret_cast<const lump_mip_texture *>(texture_lump_begin + texture_index);
+        uint32_t string_length = strnlen(mip_texture_handle->name, lump_mip_texture::max_texture_name);
+        std::string_view texture_name = std::string_view(mip_texture_handle->name, string_length);
+
+        return { mip_texture_handle->name, string_length };
+    }
+
+    uint32_t get_texture_id(bsp_handle handle, std::string_view name) {
+        auto& info = *reinterpret_cast<bsp_info*>(handle);
+
+        auto* texture_lump_begin = reinterpret_cast<const uint8_t*>(info.lump_begins[lump_type::LUMP_TEXTURES]);
+        auto* texture_lump_end = reinterpret_cast<const uint8_t*>(info.lump_ends[lump_type::LUMP_TEXTURES]);
+
+        auto* texture_header = reinterpret_cast<const lump_texture_header*>(texture_lump_begin);
+        uint32_t texture_header_length = sizeof(lump_texture_header) + (texture_header->mip_texture_count - 1) * sizeof(uint32_t);
+        auto* texture_begin = texture_lump_begin + sizeof(lump_texture_header);
+        auto* texture_end = texture_lump_begin + texture_header_length;
+
+        if (texture_end > texture_lump_end)
+            throw std::runtime_error("Texture header extends beyond end of lump");
+
+        uint32_t texture_id = 0;
+        for (; texture_begin < texture_end; texture_begin += sizeof(uint32_t)) {
+            auto texture_offset = *reinterpret_cast<const uint32_t *>(texture_begin);
+            auto *mip_texture_handle = reinterpret_cast<const lump_mip_texture *>(texture_lump_begin + texture_offset);
+            uint32_t string_length = strnlen(mip_texture_handle->name, lump_mip_texture::max_texture_name);
+            std::string_view texture_name = std::string_view(mip_texture_handle->name, string_length);
+
+            if (texture_name == name)
+                return texture_id;
+
+            texture_id++;
+        }
+
+        return 0;
     }
 
     aabb get_model_aabb(bsp_handle handle, uint32_t model_id) {
@@ -414,7 +528,7 @@ namespace voxlife::bsp {
         CloseHandle(info.hMap);
         CloseHandle(info.hFile);
 #else
-        munmap(info.file_data);
+        munmap(const_cast<void*>(reinterpret_cast<const void*>(info.file_data)), info.file_size);
         close(info.bsp_file);
 #endif
         delete reinterpret_cast<bsp_info*>(handle);

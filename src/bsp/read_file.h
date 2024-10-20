@@ -65,6 +65,9 @@ namespace voxlife::bsp {
     std::vector<face> get_model_faces(bsp_handle handle, uint32_t model_id);
     aabb get_model_aabb(bsp_handle handle, uint32_t model_id);
     texture get_texture_data(bsp_handle handle, uint32_t texture_id);
+    texture get_texture_data(bsp_handle handle, std::string_view texture_id);
+    std::string_view get_texture_name(bsp_handle handle, uint32_t texture_id);
+    uint32_t get_texture_id(bsp_handle handle, std::string_view name);
     std::vector<entity> get_entities(bsp_handle handle);
 }
 

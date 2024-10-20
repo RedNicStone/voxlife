@@ -15,6 +15,7 @@
 #include <sys/fcntl.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <sys/unistd.h>
 #endif
 
 
@@ -178,7 +179,7 @@ namespace voxlife::wad {
         CloseHandle(info.hMap);
         CloseHandle(info.hFile);
 #else
-        munmap(info.file_data);
+        munmap(const_cast<void*>(reinterpret_cast<const void*>(info.file_data)), info.file_size);
         close(info.wad_file);
 #endif
         delete reinterpret_cast<wad_info*>(handle);

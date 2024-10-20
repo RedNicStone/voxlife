@@ -44,47 +44,56 @@ namespace voxlife::hl1 {
 
             auto& worldspawn = std::get<entity_types::worldspawn>(worldspan_entities[0]);
 
-            std::vector<std::string> wad_paths;
-            size_t start = 0;
-            size_t end;
-            while (start <= worldspawn.wad.size()) {
-                end = worldspawn.wad.find(';', start);
-                if (end == std::string_view::npos) {
-                    end = worldspawn.wad.size();
+            {
+                std::vector<std::string> wad_paths;
+                size_t start = 0;
+                size_t end;
+                while (start <= worldspawn.wad.size()) {
+                    end = worldspawn.wad.find(';', start);
+                    if (end == std::string_view::npos) {
+                        end = worldspawn.wad.size();
+                    }
+                    std::string_view segment = worldspawn.wad.substr(start, end - start);
+                    if (!segment.empty()) {
+                        std::string relative_wad_path;
+                        relative_wad_path.reserve(segment.size());
+                        std::replace_copy(segment.begin(), segment.end(), std::back_inserter(relative_wad_path), '\\', '/');
+                        std::filesystem::path absolute_wad_path = game_path_fs;
+                        std::filesystem::path relative_wad_path_fs(std::move(relative_wad_path));
+
+                        // std::filesystem doesn't have a way to remove the top-level directory, so we have to do it manually
+                        auto it = ++relative_wad_path_fs.begin();
+                        it++;
+                        for (; it != relative_wad_path_fs.end(); ++it)
+                            absolute_wad_path /= *it;
+
+                        wad_paths.push_back(std::filesystem::weakly_canonical(absolute_wad_path).make_preferred().string());
+                    }
+
+                    start = end + 1;
                 }
-                std::string_view segment = worldspawn.wad.substr(start, end - start);
-                if (!segment.empty()) {
-                    std::string relative_wad_path;
-                    relative_wad_path.reserve(segment.size());
-                    std::replace_copy(segment.begin(), segment.end(), std::back_inserter(relative_wad_path), '\\', '/');
-                    std::filesystem::path absolute_wad_path = game_path_fs;
-                    std::filesystem::path relative_wad_path_fs(std::move(relative_wad_path));
 
-                    // std::filesystem doesn't have a way to remove the top-level directory, so we have to do it manually
-                    auto it = ++relative_wad_path_fs.begin();
-                    it++;
-                    for (; it != relative_wad_path_fs.end(); ++it)
-                        absolute_wad_path /= *it;
+                wad_handles.reserve(wad_paths.size());
+                for (auto& path : wad_paths) {
+                    wad::wad_handle wad_handle;
+                    try {
+                        wad::open_file(path, &wad_handle);
+                    } catch (std::exception& e) {
+                        std::cerr << "Failed to open wad file " << path << ": " << e.what() << std::endl;
+                    }
 
-                    wad_paths.push_back(std::filesystem::weakly_canonical(absolute_wad_path).make_preferred().string());
+                    wad_handles.push_back(wad_handle);
                 }
 
-                start = end + 1;
+                bsp::load_textures(bsp_handle, wad_handles);
             }
 
-            wad_handles.reserve(wad_paths.size());
-            for (auto& path : wad_paths) {
-                wad::wad_handle wad_handle;
-                try {
-                    wad::open_file(path, &wad_handle);
-                } catch (std::exception& e) {
-                    std::cerr << "Failed to open wad file " << path << ": " << e.what() << std::endl;
-                }
+            {
+                auto skybox_name = worldspawn.skyname;
 
-                wad_handles.push_back(wad_handle);
+                auto texture = bsp::get_texture_data(bsp_handle, skybox_name);
+                auto a = 0;
             }
-
-            bsp::load_textures(bsp_handle, wad_handles);
         }
 
         {
