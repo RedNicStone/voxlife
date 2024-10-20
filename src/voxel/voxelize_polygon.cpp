@@ -137,15 +137,11 @@ T bilinear_sample(glm::vec2 uv, glm::u32vec2 size, std::span<T> data) {
     glm::u32vec2 texel_min = glm::floor(scaled_uv);
 
     glm::u32vec2 texel_max = texel_min + glm::u32vec2(1, 1);
-    if (texel_min.x > size.x - 1) [[unlikely]]
+    if (texel_max.x > size.x - 1) [[unlikely]]
         texel_max.x = 0;
-    else
-        texel_max.x = texel_min.x + 1;
 
-    if (texel_min.y > size.y - 1) [[unlikely]]
+    if (texel_max.y > size.y - 1) [[unlikely]]
         texel_max.y = 0;
-    else
-        texel_max.y = texel_min.y + 1;
 
     T Q00 = data[texel_min.x + texel_min.y * size.x];
     T Q10 = data[texel_max.x + texel_min.y * size.x];
