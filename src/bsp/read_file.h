@@ -16,7 +16,8 @@ namespace voxlife::bsp {
 
     typedef struct bsp_handle_T *bsp_handle;
 
-    void open_file(std::string_view filename, wad::wad_handle resources, bsp_handle* handle);
+    void open_file(std::string_view filename, bsp_handle* handle);
+    void load_textures(bsp_handle handle, std::span<wad::wad_handle> resources);
 
     struct face {
         enum type : int32_t {
@@ -55,7 +56,13 @@ namespace voxlife::bsp {
         std::vector<key_value_pair> pairs;
     };
 
+    struct aabb {
+        glm::vec3 min;
+        glm::vec3 max;
+    };
+
     std::vector<face> get_model_faces(bsp_handle handle, uint32_t model_id);
+    aabb get_model_aabb(bsp_handle handle, uint32_t model_id);
     texture get_texture_data(bsp_handle handle, uint32_t texture_id);
     std::vector<entity> get_entities(bsp_handle handle);
 }

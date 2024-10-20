@@ -113,7 +113,21 @@ namespace voxlife::bsp {
         }
     }
 
-    void read_textures(bsp_info &info) {
+    std::pair<const uint8_t*, size_t> lookup_texture(bsp_handle handle, std::string_view name, std::span<wad::wad_handle> resources) {
+        for (auto& resource : resources) {
+            auto* data = reinterpret_cast<const uint8_t*>(wad::get_entry(resource, name));
+
+            if (data != nullptr) {
+                size_t texture_size = wad::get_entry_size(resource, name);
+                return { data, texture_size };
+            }
+        }
+        return { nullptr, 0 };
+    }
+
+    void load_textures(bsp_handle handle, std::span<wad::wad_handle> resources) {
+        auto& info = *reinterpret_cast<bsp_info*>(handle);
+
         auto* texture_lump_begin = reinterpret_cast<const uint8_t*>(info.lump_begins[lump_type::LUMP_TEXTURES]);
         auto* texture_lump_end = reinterpret_cast<const uint8_t*>(info.lump_ends[lump_type::LUMP_TEXTURES]);
 
@@ -139,14 +153,16 @@ namespace voxlife::bsp {
                 // Texture is internal, do nothing
             } else {
                 // Texture is external, load it
-                mip_texture = reinterpret_cast<const uint8_t*>(wad::get_entry(info.resources, mip_texture_handle->name));
+                auto texture = lookup_texture(handle, mip_texture_handle->name, resources);
+                mip_texture = texture.first;
+                size_t texture_size = texture.second;
+
                 if (mip_texture == nullptr) {
                     //throw std::runtime_error(std::format("Could not find texture '{}'", mip_texture_handle->name));
                     std::cout << std::format("Could not find texture '{}'\n", mip_texture_handle->name);
                     continue;
                 }
 
-                size_t texture_size = wad::get_entry_size(info.resources, mip_texture_handle->name);
                 texture_data_end = mip_texture + texture_size;
 
                 mip_texture_handle = reinterpret_cast<const lump_mip_texture*>(mip_texture);
@@ -220,6 +236,15 @@ namespace voxlife::bsp {
         return { texture.data, texture.size };
     }
 
+    aabb get_model_aabb(bsp_handle handle, uint32_t model_id) {
+        auto& info = *reinterpret_cast<bsp_info*>(handle);
+
+        const auto& root_model = span_at(info.models, model_id);
+        const auto& root_node = span_at(info.nodes, root_model.head_nodes[0]);
+
+        return { root_model.min, root_model.max };
+    }
+
     std::vector<face> get_model_faces(bsp_handle handle, uint32_t model_id) {
         auto& info = *reinterpret_cast<bsp_info*>(handle);
 
@@ -242,9 +267,8 @@ namespace voxlife::bsp {
             auto &node = node_stack.top();
             node_stack.pop();
 
-            auto node_face_span = safe_subspan(info.faces, node.first_face, node.face_count);
-            for (auto& face : node_face_span)
-                bsp_faces.push_back(face);
+            //auto node_face_span = safe_subspan(info.faces, node.first_face, node.face_count);
+            //bsp_faces.insert(bsp_faces.end(), node_face_span.begin(), node_face_span.end());
 
             for (auto& child_node : node.children) {
                 std::span<const lump_mark_surface> mark_surfaces;
@@ -255,8 +279,11 @@ namespace voxlife::bsp {
                     continue;
                 }
 
+                if (child_node == -1)
+                    continue;
+
                 leaf_count++;
-                auto& leaf = span_at(info.leafs, -child_node - 1);
+                auto& leaf = span_at(info.leafs, ~child_node);
                 mark_surfaces = safe_subspan(info.mark_surfaces, leaf.first_mark_surface, leaf.mark_surface_count);
 
                 face_count += leaf.mark_surface_count;
@@ -267,7 +294,8 @@ namespace voxlife::bsp {
                     bsp_faces.push_back(face);
                 }
             }
-        }*/
+        }
+         */
 
         std::vector<face> faces;
 
@@ -304,7 +332,7 @@ namespace voxlife::bsp {
         return faces;
     }
 
-    void open_file(std::string_view filename, wad::wad_handle resources, bsp_handle* handle) {
+    void open_file(std::string_view file_path, bsp_handle* handle) {
         *handle = reinterpret_cast<bsp_handle>(new bsp_info{});
         auto& info = reinterpret_cast<bsp_info&>(**handle);
 
@@ -314,7 +342,7 @@ namespace voxlife::bsp {
         LPVOID lpBasePtr;
         LARGE_INTEGER liFileSize;
 
-        info.hFile = CreateFile(filename.data(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+        info.hFile = CreateFile(file_path.data(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 
         if (info.hFile == INVALID_HANDLE_VALUE) {
             auto err = GetLastError();
@@ -329,7 +357,7 @@ namespace voxlife::bsp {
 
         if (liFileSize.QuadPart == 0) {
             CloseHandle(info.hFile);
-            throw std::runtime_error(std::format("File is empty '{}'", filename));
+            throw std::runtime_error(std::format("File is empty '{}'", file_path));
         }
 
         info.hMap = CreateFileMapping(info.hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
@@ -354,32 +382,28 @@ namespace voxlife::bsp {
 
 #else
 
-        info.bsp_file = open(filename.data(), O_RDONLY);
+        info.bsp_file = open(file_path.data(), O_RDONLY);
         if (info.bsp_file < 0)
-            throw std::runtime_error(std::format("Could not open file '{}'", filename));
+            throw std::runtime_error(std::format("Could not open file '{}'", file_path));
 
         struct stat st{};
         if (fstat(info.bsp_file, &st) < 0)
-            throw std::runtime_error(std::format("Could not stat file '{}'", filename));
+            throw std::runtime_error(std::format("Could not stat file '{}'", file_path));
 
         info.file_size = st.st_size;
 
         void* data = mmap(nullptr, info.file_size, PROT_READ, MAP_PRIVATE | MAP_FILE, info.bsp_file, 0);
         if (data == MAP_FAILED)
-            throw std::runtime_error(std::format("Could not mmap file '{}'", filename));
+            throw std::runtime_error(std::format("Could not mmap file '{}'", file_path));
 
         if (madvise(data, info.file_size, MADV_RANDOM | MADV_WILLNEED | MADV_HUGEPAGE) < 0)
-            throw std::runtime_error(std::format("Could not madvise file '{}'", filename));
+            throw std::runtime_error(std::format("Could not madvise file '{}'", file_path));
 
         info.file_data = reinterpret_cast<uint8_t*>(data);
 
 #endif
 
-
-        info.resources = resources;
-
         parse_header(info);
-        read_textures(info);
 
         //read_map(info);
     }

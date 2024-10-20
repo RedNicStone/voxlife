@@ -28,8 +28,6 @@ namespace voxlife::bsp {
             const header *header;
         };
 
-        wad::wad_handle resources;
-
         const void* lump_begins[lump_type::LUMP_MAX];
         const void* lump_ends[lump_type::LUMP_MAX];
 

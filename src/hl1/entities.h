@@ -457,27 +457,43 @@ namespace voxlife::hl1 {
 
     enum class parameter_type {
         classname,
+        targetname,
         origin,
         light,
+        pattern,
         style,
         fade,
         angle,
         map,
         landmark,
         model,
+        message,
+        skyname,
+        chaptertitle,
+        gametitle,
+        newunit,
+        wad,
         PARAMETER_TYPE_MAX
     };
 
     constexpr const char* parameter_names[] = {
         "classname",
+        "targetname",
         "origin",
         "_light",
+        "pattern",
         "style",
         "_fade",
         "angle",
         "map",
         "landmark",
         "model",
+        "message",
+        "skyname",
+        "chaptertitle",
+        "gametitle",
+        "newunit",
+        "wad",
     };
 
     struct entity_types {
@@ -503,6 +519,15 @@ namespace voxlife::hl1 {
             std::string_view targetname;
             glm::ivec3 origin;
         };
+
+        struct worldspawn {
+            std::string_view message;
+            std::string_view skyname;
+            std::string_view chaptertitle;
+            std::string_view wad;
+            bool gametitle;
+            bool newunit;
+        };
     };
 
     using entity = std::variant<
@@ -510,7 +535,8 @@ namespace voxlife::hl1 {
             entity_types::light,
             entity_types::info_player_start,
             entity_types::trigger_changelevel,
-            entity_types::info_landmark>;
+            entity_types::info_landmark,
+            entity_types::worldspawn>;
 
 }
 

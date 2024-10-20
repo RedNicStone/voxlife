@@ -11,6 +11,23 @@
 
 namespace voxlife::hl1 {
 
+    template<typename T>
+    std::from_chars_result from_chars(std::string_view str, T& value) {
+        return std::from_chars(str.data(), str.data() + str.size(), value);
+    }
+
+    template<>
+    std::from_chars_result from_chars(std::string_view str, bool& value) {
+        if (str == "0")
+            value = false;
+        else if (str == "1")
+            value = true;
+        else
+            return { nullptr, std::errc::invalid_argument };
+
+        return { nullptr, std::errc() };
+    }
+
     template<typename...Ts>
     bool tag_values_from_chars(std::string_view value_str, Ts&...ts) {
         auto beg = value_str.begin();
@@ -27,7 +44,12 @@ namespace voxlife::hl1 {
                 return;
             }
             auto x_str = std::string_view(beg, tag_end);
-            std::from_chars(x_str.data(), x_str.data() + x_str.size(), x);
+            auto from_chars_result = from_chars(x_str, x);
+            if (from_chars_result.ec != std::errc()) {
+                result = false;
+                return;
+            }
+
             if (!is_last)
                 beg = tag_end + 1;
         };
@@ -57,8 +79,38 @@ namespace voxlife::hl1 {
 
     static auto parameter_type_map = create_parameter_type_map();
 
-    entity_types::light construct_light(const bsp::entity& entity) {
-        entity_types::light result{};
+    template<typename T>
+    struct function_traits;
+
+    template<typename Ret, typename... Args>
+    struct function_traits<Ret(*)(Args...)> {
+        using return_type = Ret;
+        using args_tuple_type = std::tuple<Args...>;
+    };
+
+    template<typename Ret, typename ClassType, typename... Args>
+    struct function_traits<Ret(ClassType::*)(Args...)> {
+        using return_type = Ret;
+        using args_tuple_type = std::tuple<Args...>;
+    };
+
+    template<typename Ret, typename ClassType, typename... Args>
+    struct function_traits<Ret(ClassType::*)(Args...) const> {
+        using return_type = Ret;
+        using args_tuple_type = std::tuple<Args...>;
+    };
+
+    template<typename T>
+    struct function_traits : function_traits<decltype(&T::operator())> {};
+
+    template<typename Func>
+    using entity_type = typename std::remove_reference<typename std::tuple_element<0, typename function_traits<Func>::args_tuple_type>::type>::type;
+
+    // Func should have a signature of:
+    // void(T&, parameter_type, std::string_view, bool&);
+    template<typename Func>
+    auto construct_entity(const bsp::entity& entity, Func f) {
+        entity_type<Func> result{};
 
         for (const auto& pair : entity.pairs) {
             auto parameter_type = parameter_type_map.find(pair.key);
@@ -68,31 +120,11 @@ namespace voxlife::hl1 {
             }
 
             bool parse_result = true;
-            switch (parameter_type->second) {
-                case parameter_type::origin:
-                    parse_result = tag_values_from_chars(pair.value, result.origin.x, result.origin.y, result.origin.z);
-                    break;
-                case parameter_type::light:
-                    parse_result = tag_values_from_chars(pair.value, result.color.r, result.color.g, result.color.b, result.intensity);
-                    if (!parse_result)
-                        parse_result = tag_values_from_chars(pair.value, result.color.r, result.color.g, result.color.b);
-                    break;
-                case parameter_type::style:
-                    if (pair.value != "0" && pair.value != "32" && pair.value != "33")
-                        parse_result = false;
-                    break;
-                case parameter_type::fade:
-                    parse_result = tag_values_from_chars(pair.value, result.fade);
-                    break;
-                case parameter_type::classname:
-                    break;
-                default:
-                    std::cerr << "Unparsed parameter type: " << pair.key << std::endl;
-                    break;
-            }
+            f(result, parameter_type->second, pair.key, pair.value, parse_result);
 
             if (!parse_result) {
-                std::cerr << "Failed to parse parameter '" << pair.key << "' with value '" << pair.value << "'" << std::endl;
+                std::cerr << "Failed to parse parameter '" << pair.key << "' with value '" << pair.value << "'"
+                          << std::endl;
                 break;
             }
         }
@@ -100,93 +132,113 @@ namespace voxlife::hl1 {
         return result;
     }
 
-    entity_types::info_player_start construct_info_player_start(const bsp::entity& entity) {
-        entity_types::info_player_start result{};
+#define PARAMETER_CONSTRUCTOR(type_name) \
+    void construct_parameter_##type_name(entity_types::type_name& result, parameter_type type, std::string_view key, std::string_view value, bool& parse_result)
 
-        for (const auto& pair : entity.pairs) {
-            auto parameter_type = parameter_type_map.find(pair.key);
-            if (parameter_type == parameter_type_map.end()) {
-                std::cerr << "Unknown parameter type: " << pair.key << std::endl;
-                continue;
-            }
-
-            bool parse_result = true;
-            switch (parameter_type->second) {
-                case parameter_type::origin:
-                    parse_result = tag_values_from_chars(pair.value, result.origin.x, result.origin.y, result.origin.z);
-                    break;
-                case parameter_type::angle:
-                    parse_result = tag_values_from_chars(pair.value, result.angle);
-                    break;
-                case parameter_type::classname:
-                    break;
-                default:
-                    std::cerr << "Unparsed parameter type: " << pair.key << std::endl;
-                    break;
-            }
-
-            if (!parse_result) {
-                std::cerr << "Failed to parse parameter '" << pair.key << "' with value '" << pair.value << "'" << std::endl;
+    PARAMETER_CONSTRUCTOR(light) {
+        switch (type) {
+            case parameter_type::origin:
+                parse_result = tag_values_from_chars(value, result.origin.x, result.origin.y, result.origin.z);
                 break;
-            }
+            case parameter_type::light:
+                parse_result = tag_values_from_chars(value, result.color.r, result.color.g, result.color.b, result.intensity);
+                if (!parse_result)
+                    parse_result = tag_values_from_chars(value, result.color.r, result.color.g, result.color.b);
+                break;
+            case parameter_type::style:
+                if (value != "0" && value != "32" && value != "33")
+                    parse_result = false;
+                break;
+            case parameter_type::fade:
+                parse_result = tag_values_from_chars(value, result.fade);
+                break;
+            case parameter_type::classname:
+                break;
+            default:
+                std::cerr << "Unparsed parameter type: " << key << std::endl;
+                break;
         }
-
-        return result;
     }
 
-    entity_types::trigger_changelevel construct_trigger_changelevel(const bsp::entity& entity) {
-        entity_types::trigger_changelevel result{};
-
-        for (const auto& pair : entity.pairs) {
-            auto parameter_type = parameter_type_map.find(pair.key);
-            if (parameter_type == parameter_type_map.end()) {
-                std::cerr << "Unknown parameter type: " << pair.key << std::endl;
-                continue;
-            }
-
-            bool parse_result = true;
-            switch (parameter_type->second) {
-                case parameter_type::model:
-                    //parse_result = tag_values_from_chars(pair.value, result.model);
-                    result.model = pair.value;
-                    break;
-                case parameter_type::landmark:
-                    result.landmark = pair.value;
-                    break;
-                case parameter_type::map:
-                    result.map = pair.value;
-                    break;
-                case parameter_type::classname:
-                    break;
-                default:
-                    std::cerr << "Unparsed parameter type: " << pair.key << std::endl;
-                    break;
-            }
-
-            if (!parse_result) {
-                std::cerr << "Failed to parse parameter '" << pair.key << "' with value '" << pair.value << "'" << std::endl;
+    PARAMETER_CONSTRUCTOR(info_player_start) {
+        switch (type) {
+            case parameter_type::origin:
+                parse_result = tag_values_from_chars(value, result.origin.x, result.origin.y, result.origin.z);
                 break;
-            }
+            case parameter_type::angle:
+                parse_result = tag_values_from_chars(value, result.angle);
+                break;
+            case parameter_type::classname:
+                break;
+            default:
+                std::cerr << "Unparsed parameter type: " << key << std::endl;
+                break;
         }
+    }
 
-        return result;
+    PARAMETER_CONSTRUCTOR(trigger_changelevel) {
+        switch (type) {
+            case parameter_type::model:
+                //parse_result = tag_values_from_chars(pair.value, result.model);
+                result.model = value;
+                break;
+            case parameter_type::landmark:
+                result.landmark = value;
+                break;
+            case parameter_type::map:
+                result.map = value;
+                break;
+            case parameter_type::classname:
+                break;
+            default:
+                std::cerr << "Unparsed parameter type: " << key << std::endl;
+                break;
+        }
+    }
+
+    PARAMETER_CONSTRUCTOR(worldspawn) {
+        switch (type) {
+            case parameter_type::message:
+                result.message = value;
+                break;
+            case parameter_type::skyname:
+                result.skyname = value;
+                break;
+            case parameter_type::chaptertitle:
+                result.chaptertitle = value;
+                break;
+            case parameter_type::gametitle:
+                parse_result = tag_values_from_chars(value, result.gametitle);
+                break;
+            case parameter_type::newunit:
+                parse_result = tag_values_from_chars(value, result.newunit);
+                break;
+            case parameter_type::wad:
+                result.wad = value;
+                break;
+            default:
+                std::cerr << "Unparsed parameter type: " << key << std::endl;
+                break;
+        }
     }
 
     entity construct_entity(const bsp::entity& entity, classname_type type) {
         switch (type) {
             case classname_type::light:
-                return construct_light(entity);
+                return construct_entity(entity, construct_parameter_light);
             case classname_type::info_player_start:
-                return construct_info_player_start(entity);
+                return construct_entity(entity, construct_parameter_info_player_start);
             case classname_type::trigger_changelevel:
-                return construct_trigger_changelevel(entity);
+                return construct_entity(entity, construct_parameter_trigger_changelevel);
+            case classname_type::worldspawn:
+                return construct_entity(entity, construct_parameter_worldspawn);
             default:
                 //std::cerr << "Unable to parse entity type: " << classname_names[static_cast<uint32_t>(type)] << std::endl;
                 return std::monostate{};
         }
     }
 
-    level_entities read_level(bsp::bsp_handle handle) {
+    level_entities read_entities(bsp::bsp_handle handle) {
         level_entities result{};
 
         auto entities = bsp::get_entities(handle);

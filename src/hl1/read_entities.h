@@ -15,7 +15,7 @@ namespace voxlife::hl1 {
         std::vector<entity> entities[static_cast<size_t>(classname_type::CLASSNAME_TYPE_MAX)];
     };
 
-    level_entities read_level(bsp::bsp_handle handle);
+    level_entities read_entities(bsp::bsp_handle handle);
 }
 
 
