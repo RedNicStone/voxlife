@@ -8,7 +8,7 @@
 
 namespace voxlife::voxel {
 
-    bool voxelize_face(voxlife::bsp::bsp_handle handle, voxlife::bsp::face& face, uint32_t face_index, Model& out_model);
+    bool voxelize_face(voxlife::bsp::bsp_handle handle, std::string_view level_name, voxlife::bsp::face& face, uint32_t face_index, Model& out_model);
 
 }
 

@@ -14,6 +14,7 @@
 #include <random>
 #include <glm/geometric.hpp>
 #include <iostream>
+#include <filesystem>
 #include <cmath>
 #include <set>
 #include <fstream>
@@ -68,22 +69,22 @@ struct MaterialTypeSlot {
 };
 
 constexpr std::array<MaterialTypeSlot, MATERIAL_TYPE_MAX> material_type_slots{{
-    {0,    0},  // AIR
-    {16, 224},  // UN_PHYSICAL
-    {8,  176},  // HARD_MASONRY
-    {8,  168},  // HARD_METAL
-    {16, 152},  // PLASTIC
-    {16, 136},  // HEAVY_METAL
-    {16, 120},  // WEAK_METAL
-    {16, 104},  // PLASTER
-    {16,  88},  // BRICK
-    {16,  72},  // CONCRETE
-    {16,  56},  // WOOD
-    {16,  40},  // ROCK
-    {16,  24},  // DIRT
-    {16,   8},  // GRASS
-    {8,    0},  // GLASS
-    {253,  1},  // MATERIAL_ALL_TYPES
+    {0, 0},    // AIR
+    {16, 224}, // UN_PHYSICAL
+    {8, 176},  // HARD_MASONRY
+    {8, 168},  // HARD_METAL
+    {16, 152}, // PLASTIC
+    {16, 136}, // HEAVY_METAL
+    {16, 120}, // WEAK_METAL
+    {16, 104}, // PLASTER
+    {16, 88},  // BRICK
+    {16, 72},  // CONCRETE
+    {16, 56},  // WOOD
+    {16, 40},  // ROCK
+    {16, 24},  // DIRT
+    {16, 8},   // GRASS
+    {8, 0},    // GLASS
+    {253, 1},  // MATERIAL_ALL_TYPES
 }};
 
 struct MaterialData {
@@ -337,14 +338,14 @@ void write_magicavoxel_model(std::string_view filename, std::span<const VoxelMod
 void write_teardown_level(const LevelInfo &info) {
     auto xml_str = std::string{};
 
-    auto level_pos = std::array<float, 3>{0, 0, 0};
     auto level_rot = std::array<float, 3>{0, 0, 0};
 
     xml_str += "<prefab version=\"1.6.0\">\n";
     xml_str += std::format(
-        "<group name=\"instance=MOD/script/{}.xml\" pos=\"{:.3f} {:.3f} {:.3f}\" rot=\"{:.3f} {:.3f} {:.3f}\">\n",
+        "<group name=\"instance=MOD/levels/{}.xml\">\n<group tags=\"{}\" pos=\"{:.3f} {:.3f} {:.3f}\" rot=\"{:.3f} {:.3f} {:.3f}\">\n",
         info.name,
-        level_pos[0], level_pos[1], level_pos[2],
+        info.name,
+        info.level_pos.x, info.level_pos.y, info.level_pos.z,
         level_rot[0], level_rot[1], level_rot[2]);
 
     xml_str += std::format(
@@ -353,20 +354,38 @@ void write_teardown_level(const LevelInfo &info) {
         info.name,
         info.spawn_pos.x, info.spawn_pos.y, info.spawn_pos.z,
         info.spawn_rot.x, info.spawn_rot.y, info.spawn_rot.z);
+    
+    xml_str += std::format(
+        R"(<location tags="playerspawn {}" pos="{:.3f} {:.3f} {:.3f}" rot="{:.3f} {:.3f} {:.3f}"/>)"
+        "\n",
+        info.name,
+        info.spawn_pos.x, info.spawn_pos.y, info.spawn_pos.z,
+        info.spawn_rot.x, -info.spawn_rot.y, info.spawn_rot.z);
 
     for (auto const &location : info.locations) {
         xml_str += std::format(
-            R"(<location tags="{} {}" name="{}" pos="{} {} {}"/>)"
+            R"(<location tags="{} targetname_{}" name="{}" pos="{:.3f} {:.3f} {:.3f}"/>)"
             "\n",
             info.name,
             location.name,
             location.name,
             location.pos.x, location.pos.y, location.pos.z);
     }
+    for (auto const &trigger : info.triggers) {
+        xml_str += std::format(
+            R"(<trigger tags="{} changelevel map={} landmark={}" name="{}" pos="{:.3f} {:.3f} {:.3f}" type="box" size="{:.3f} {:.3f} {:.3f}"/>)"
+            "\n",
+            info.name,
+            trigger.map,
+            trigger.landmark,
+            trigger.map,
+            trigger.pos.x + trigger.size.x * 0.5f, trigger.pos.y, trigger.pos.z + trigger.size.z * 0.5f,
+            trigger.size.x, trigger.size.y, trigger.size.z);
+    }
 
     for (auto const &light : info.lights) {
         xml_str += std::format(
-            R"(<light tags="{}" pos="{} {} {}" color="{} {} {}" scale="{}"/>)"
+            R"(<light tags="{}" pos="{:.3f} {:.3f} {:.3f}" color="{} {} {}" scale="{}"/>)"
             "\n",
             info.name,
             light.pos.x, light.pos.y, light.pos.z,
@@ -377,7 +396,7 @@ void write_teardown_level(const LevelInfo &info) {
     }
 
     for (auto const &model : info.models) {
-        auto model_filepath = std::format("MOD/brush/{}.vox", model.name);
+        auto model_filepath = std::format("MOD/brush/{}/{}.vox", info.name, model.name);
 
         xml_str += std::format(
             R"(<voxbox name="{}" tags="{}" pos="{:.3f} {:.3f} {:.3f}" rot="{:.3f} {:.3f} {:.3f}" size="{} {} {}" brush="{}"/>)"
@@ -390,9 +409,11 @@ void write_teardown_level(const LevelInfo &info) {
             model_filepath);
     }
 
-    xml_str += "</group>\n</prefab>\n";
+    xml_str += "</group>\n</group>\n</prefab>\n";
 
-    auto level_filepath = std::format("script/{}.xml", info.name);
+    std::filesystem::create_directories("levels");
+
+    auto level_filepath = std::format("levels/{}.xml", info.name);
     auto *write_ptr = fopen(level_filepath.data(), "wb");
     if (write_ptr) {
         fwrite(xml_str.data(), xml_str.size(), 1, write_ptr);

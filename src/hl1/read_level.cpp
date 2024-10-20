@@ -17,7 +17,6 @@
 using namespace voxlife::voxel;
 
 namespace voxlife::hl1 {
-
     int load_level(std::string_view game_path, std::string_view level_name) {
         std::filesystem::path game_path_fs(game_path);
 
@@ -34,8 +33,9 @@ namespace voxlife::hl1 {
         }
 
         voxlife::bsp::bsp_handle bsp_handle;
-        voxlife::bsp::open_file(level_path.c_str(), &bsp_handle);
+        voxlife::bsp::open_file(std::filesystem::weakly_canonical(level_path).make_preferred().string(), &bsp_handle);
         auto entities = read_entities(bsp_handle);
+        std::vector<wad::wad_handle> wad_handles;
 
         {
             auto worldspan_entities = entities.entities[static_cast<size_t>(classname_type::worldspawn)];
@@ -44,7 +44,7 @@ namespace voxlife::hl1 {
 
             auto& worldspawn = std::get<entity_types::worldspawn>(worldspan_entities[0]);
 
-            std::vector<std::filesystem::path> wad_paths;
+            std::vector<std::string> wad_paths;
             size_t start = 0;
             size_t end;
             while (start <= worldspawn.wad.size()) {
@@ -66,18 +66,17 @@ namespace voxlife::hl1 {
                     for (; it != relative_wad_path_fs.end(); ++it)
                         absolute_wad_path /= *it;
 
-                    wad_paths.push_back(absolute_wad_path);
+                    wad_paths.push_back(std::filesystem::weakly_canonical(absolute_wad_path).make_preferred().string());
                 }
 
                 start = end + 1;
             }
 
-            std::vector<wad::wad_handle> wad_handles;
             wad_handles.reserve(wad_paths.size());
             for (auto& path : wad_paths) {
                 wad::wad_handle wad_handle;
                 try {
-                    wad::open_file(path.c_str(), &wad_handle);
+                    wad::open_file(path, &wad_handle);
                 } catch (std::exception& e) {
                     std::cerr << "Failed to open wad file " << path << ": " << e.what() << std::endl;
                 }
@@ -97,7 +96,7 @@ namespace voxlife::hl1 {
             for (auto& face : faces) {
                 try {
                     models.emplace_back();
-                    voxelize_face(bsp_handle, face, count++, models.back());
+                    voxelize_face(bsp_handle, level_name, face, count++, models.back());
                 } catch (std::exception& e) {
                     std::cerr << e.what() << std::endl;
                 }
@@ -128,8 +127,8 @@ namespace voxlife::hl1 {
 
             auto& player_start = std::get<voxlife::hl1::entity_types::info_player_start>(player_start_entities.front());
 
-            std::vector<bsp::aabb> level_transitions;
-            level_transitions.reserve(entities.entities[static_cast<uint32_t>(voxlife::hl1::classname_type::trigger_changelevel)].size());
+            std::vector<Trigger> triggers;
+            triggers.reserve(entities.entities[static_cast<uint32_t>(voxlife::hl1::classname_type::trigger_changelevel)].size());
             for (auto const &entity : entities.entities[static_cast<uint32_t>(voxlife::hl1::classname_type::trigger_changelevel)]) {
                 auto& transition = std::get<voxlife::hl1::entity_types::trigger_changelevel>(entity);
                 if (transition.model[0] != '*') {
@@ -137,32 +136,54 @@ namespace voxlife::hl1 {
                     continue;
                 }
 
-                auto model_id_string = transition.map.substr(1);
+                auto model_id_string = transition.model.substr(1);
                 uint32_t model_id;
                 auto result = std::from_chars(model_id_string.data(), model_id_string.data() + model_id_string.size(), model_id);
-                if (result.ec != std::errc()) {
-                    std::cerr << "Failed to parse model id from '" << model_id_string << "'" << std::endl;
+                if (result.ec != std::errc() || model_id == 0) {
+                    std::cerr << "Failed to parse model id from '" << transition.model << "'" << std::endl;
                     continue;
                 }
 
                 auto model_aabb = bsp::get_model_aabb(bsp_handle, model_id);
-                model_aabb.min = glm::vec3(glm::xzy(model_aabb.min)) * (hammer_to_teardown_scale * decimeter_to_meter);
-                model_aabb.max = glm::vec3(glm::xzy(model_aabb.max)) * (hammer_to_teardown_scale * decimeter_to_meter);
-                model_aabb.min.z *= -1.0f;
-                model_aabb.max.z *= -1.0f;
-                level_transitions.push_back(model_aabb);
+                model_aabb.min = glm::vec3(glm::xzy(model_aabb.min)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter);
+                model_aabb.max = glm::vec3(glm::xzy(model_aabb.max)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter);
+                // Note: Necessary because the z axis is flipped
+                std::swap(model_aabb.min.z, model_aabb.max.z);
+
+                triggers.push_back(Trigger{
+                    .map = std::string(transition.map),
+                    .landmark = std::string(transition.landmark),
+                    .pos = model_aabb.min,
+                    .size = model_aabb.max - model_aabb.min,
+                });
             }
 
             LevelInfo info;
-            info.name = "test";
+            info.name = level_name;
             info.models = models;
             info.lights = lights;
             info.locations = locations;
+            info.triggers = triggers;
             info.spawn_pos = glm::vec3(glm::xzy(player_start.origin)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter);
             info.spawn_rot = glm::vec3(0, player_start.angle + 90, 0);
 
+            auto level_aabb = bsp::get_model_aabb(bsp_handle, 0);
+
+            level_aabb.min = glm::vec3(glm::xzy(level_aabb.min)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter);
+            level_aabb.max = glm::vec3(glm::xzy(level_aabb.max)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter);
+            // Note: Necessary because the z axis is flipped
+            std::swap(level_aabb.min.z, level_aabb.max.z);
+
+            info.level_pos = glm::vec3(0, 128, 0) - level_aabb.min - (level_aabb.max.z - level_aabb.min.z) * 0.5f;
+
             write_teardown_level(info);
         }
+
+        for (auto wad_handle : wad_handles) {
+            voxlife::wad::release(wad_handle);
+        }
+        wad_handles.clear();
+        voxlife::bsp::release(bsp_handle);
 
         return 0;
     }

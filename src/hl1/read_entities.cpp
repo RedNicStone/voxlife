@@ -196,6 +196,22 @@ namespace voxlife::hl1 {
         }
     }
 
+    PARAMETER_CONSTRUCTOR(info_landmark) {
+        switch (type) {
+            case parameter_type::origin:
+                parse_result = tag_values_from_chars(value, result.origin.x, result.origin.y, result.origin.z);
+                break;
+            case parameter_type::targetname:
+                result.targetname = value;
+                break;
+            case parameter_type::classname:
+                break;
+            default:
+                std::cerr << "Unparsed parameter type: " << key << std::endl;
+                break;
+        }
+    }
+
     PARAMETER_CONSTRUCTOR(worldspawn) {
         switch (type) {
             case parameter_type::message:
@@ -216,6 +232,8 @@ namespace voxlife::hl1 {
             case parameter_type::wad:
                 result.wad = value;
                 break;
+            case parameter_type::classname:
+                break;
             default:
                 std::cerr << "Unparsed parameter type: " << key << std::endl;
                 break;
@@ -230,6 +248,8 @@ namespace voxlife::hl1 {
                 return construct_entity(entity, construct_parameter_info_player_start);
             case classname_type::trigger_changelevel:
                 return construct_entity(entity, construct_parameter_trigger_changelevel);
+            case classname_type::info_landmark:
+                return construct_entity(entity, construct_parameter_info_landmark);
             case classname_type::worldspawn:
                 return construct_entity(entity, construct_parameter_worldspawn);
             default:

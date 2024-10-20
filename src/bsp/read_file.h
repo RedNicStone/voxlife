@@ -1,8 +1,8 @@
 
-#ifndef VOXLIFE_BSP_READFILE_H
-#define VOXLIFE_BSP_READFILE_H
+#ifndef VOXLIFE_BSP_READ_FILE_H
+#define VOXLIFE_BSP_READ_FILE_H
 
-#include <wad/readfile.h>
+#include <wad/read_file.h>
 
 #include <string_view>
 #include <vector>
@@ -17,6 +17,7 @@ namespace voxlife::bsp {
     typedef struct bsp_handle_T *bsp_handle;
 
     void open_file(std::string_view filename, bsp_handle* handle);
+    void release(bsp_handle handle);
     void load_textures(bsp_handle handle, std::span<wad::wad_handle> resources);
 
     struct face {
@@ -67,4 +68,4 @@ namespace voxlife::bsp {
     std::vector<entity> get_entities(bsp_handle handle);
 }
 
-#endif //VOXLIFE_BSP_READFILE_H
+#endif //VOXLIFE_BSP_READ_FILE_H

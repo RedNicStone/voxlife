@@ -57,11 +57,20 @@ struct Location {
     glm::vec3 pos;
 };
 
+struct Trigger {
+    std::string map;
+    std::string landmark;
+    glm::vec3 pos;
+    glm::vec3 size;
+};
+
 struct LevelInfo {
     std::string_view name;
     std::span<const Model> models;
     std::span<const Light> lights;
     std::span<const Location> locations;
+    std::span<const Trigger> triggers;
+    glm::vec3 level_pos;
     // temp
     glm::vec3 spawn_pos;
     glm::vec3 spawn_rot;

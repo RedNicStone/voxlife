@@ -10,7 +10,12 @@ int main(int argc, char *argv[]) {
     }
 
     std::string_view game_path = argv[1];
-    std::string_view level_name = argv[2];
+    auto level_count = argc - 2;
 
-    return voxlife::hl1::load_level(game_path, level_name);
+    for (int i = 0; i < level_count; ++i) {
+        std::string_view level_name = argv[2 + i];
+        auto result = voxlife::hl1::load_level(game_path, level_name);
+        if (result != 0)
+            return result;
+    }
 }

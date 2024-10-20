@@ -1,4 +1,3 @@
-
 #include <voxel/voxelize_polygon.h>
 
 #include <voxel/rasterize_polygon.h>
@@ -8,6 +7,7 @@
 #include <iostream>
 #include <format>
 #include <algorithm>
+#include <filesystem>
 
 #include <glm/geometric.hpp>
 
@@ -144,7 +144,7 @@ namespace voxlife::voxel {
         return glm::mix(glm::mix(Q00, Q01, sub_texel.x), glm::mix(Q10, Q11, sub_texel.x), sub_texel.y);
     }
 
-    bool voxelize_face(voxlife::bsp::bsp_handle handle, voxlife::bsp::face& face, uint32_t face_index, Model& out_model) {
+    bool voxelize_face(voxlife::bsp::bsp_handle handle, std::string_view level_name, voxlife::bsp::face& face, uint32_t face_index, Model& out_model) {
         auto points = convert_coordinates(face.vertices);
         auto [polygon, depths] = project_face(points, face);
         auto uvs = compute_face_uvs(face);
@@ -286,9 +286,10 @@ namespace voxlife::voxel {
                 break;
         }
 
-        write_magicavoxel_model(std::format("brush/{}.vox", face_index), std::span(&model, 1));
+        std::filesystem::create_directories(std::format("brush/{}", level_name));
+
+        write_magicavoxel_model(std::format("brush/{}/{}.vox", level_name, face_index), std::span(&model, 1));
         return true;
     }
 
 }
-

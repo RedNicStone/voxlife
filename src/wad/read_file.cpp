@@ -1,5 +1,5 @@
 
-#include <wad/readfile.h>
+#include <wad/read_file.h>
 #include <wad/primitives.h>
 
 #include <stdexcept>
@@ -170,6 +170,18 @@ namespace voxlife::wad {
 #endif
 
         index_entries(info);
+    }
+
+    void release(wad_handle handle) {
+        auto& info = reinterpret_cast<wad_info&>(*handle);
+#if defined(_WIN32)
+        CloseHandle(info.hMap);
+        CloseHandle(info.hFile);
+#else
+        munmap(info.file_data);
+        close(info.wad_file);
+#endif
+        delete reinterpret_cast<wad_info*>(handle);
     }
 
     const void* get_entry(wad_handle handle, std::string_view name) {

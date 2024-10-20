@@ -3,7 +3,7 @@
 #define VOXLIFE_READ_FILE_INFO_H
 
 #include <bsp/primitives.h>
-#include <wad/readfile.h>
+#include <wad/read_file.h>
 
 #include <glm/vec2.hpp>
 
@@ -16,8 +16,8 @@ namespace voxlife::bsp {
 
     struct bsp_info {
 #if defined(_WIN32)
-        HANDLE hFile;
-        HANDLE hMap;
+        void* hFile;
+        void* hMap;
 #else
         int bsp_file = -1;
 #endif

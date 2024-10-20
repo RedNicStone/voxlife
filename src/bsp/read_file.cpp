@@ -408,4 +408,15 @@ namespace voxlife::bsp {
         //read_map(info);
     }
 
+    void release(bsp_handle handle) {
+        auto& info = reinterpret_cast<bsp_info&>(*handle);
+#if defined(_WIN32)
+        CloseHandle(info.hMap);
+        CloseHandle(info.hFile);
+#else
+        munmap(info.file_data);
+        close(info.bsp_file);
+#endif
+        delete reinterpret_cast<bsp_info*>(handle);
+    }
 }
