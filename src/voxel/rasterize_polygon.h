@@ -71,6 +71,7 @@ namespace {
         std::vector<varying_base*> varyings{};
 
         void rasterize_polygon(std::span<glm::vec2> points);
+        void rasterize_polygon_conservatively(std::span<glm::vec2> points);
     };
 
 }
@@ -95,6 +96,7 @@ namespace voxlife::voxel {
     }
 
     void rasterize_polygon(rasterizer_handle rasterizer, std::span<glm::vec2> points);
+    void rasterize_polygon_conservatively(rasterizer_handle rasterizer, std::span<glm::vec2> points);
 
     std::span<bool> get_occupancy_varying_grid(varying_handle varying);  // todo: NOP
     template<typename T>

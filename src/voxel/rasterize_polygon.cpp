@@ -48,6 +48,13 @@ namespace voxlife::voxel {
         rasterizer_ref.rasterize_polygon(points);
     }
 
+
+    void rasterize_polygon_conservatively(rasterizer_handle rasterizer, std::span<glm::vec2> points) {
+        auto &rasterizer_ref = *reinterpret_cast<struct rasterizer *>(rasterizer);
+
+        rasterizer_ref.rasterize_polygon_conservatively(points);
+    }
+
     /*std::span<bool> get_occupancy_varying_grid(varying_handle varying) {
         auto& varying_ref = *reinterpret_cast<struct varying_occupancy*>(varying);
 
@@ -77,6 +84,168 @@ void varying_occupancy::interpolate_row(const interpolation_info &info) {
     auto line_begin = grid.begin() + info.line_y * grid_info.width;
 
     std::fill(line_begin + info.front_intersection_index, line_begin + info.back_intersection_index, true);
+}
+
+void rasterizer::rasterize_polygon_conservatively(std::span<glm::vec2> points) {
+    std::vector<std::pair<uint32_t, uint32_t>> line_indices;
+    line_indices.resize(points.size());
+
+    // Determine the signed area of the polygon
+    float signed_area = 0.0f;
+    for (auto it = points.begin(); it != points.end() - 1; ++it) {
+        auto first_point = *it;
+        auto second_point = *(it + 1);
+
+        signed_area += first_point.x * second_point.y - second_point.x * first_point.y;
+    }
+    signed_area += points.back().x * points.front().y - points.front().x * points.back().y;
+
+    // Reverse the line indices if the winding order is CCW
+    if (signed_area < 0.0f) {
+        // Generate forward line indices
+        std::generate(line_indices.begin(), line_indices.end() - 1,
+                      [index = 0ul]() mutable -> std::pair<uint32_t, uint32_t> {
+                          index++;
+                          return {index - 1, index};
+                      });
+        line_indices.back() = { points.size() - 1, 0 };
+    } else {
+        // Generate backward line indices
+        line_indices.front() = { 0, points.size() - 1 };
+        std::generate(line_indices.begin() + 1, line_indices.end(),
+                      [index = points.size()]() mutable -> std::pair<uint32_t, uint32_t> {
+                          index--;
+                          return { index, index - 1 };
+                      });
+    }
+
+    // Remove points that are on the same line
+    line_indices.erase(std::remove_if(line_indices.begin(), line_indices.end(),
+                                      [&](const auto pair) {
+                                          auto first_point = points[pair.first];
+                                          auto second_point = points[pair.second];
+
+                                          if (first_point.y == second_point.y)
+                                              return true;
+
+                                          return false;
+                                      }), line_indices.end());
+
+    // Find the lowest and highest point in the polygon for the front section
+    const auto [min_first_point, max_first_point] = std::minmax_element(line_indices.begin(), line_indices.end(),
+                                                                        [&](const std::pair<uint32_t, uint32_t> &a,
+                                                                            const std::pair<uint32_t, uint32_t> &b) {
+                                                                            return points[a.first].y < points[b.first].y;
+                                                                        });
+
+    // Find the lowest and highest point in the polygon for the front section
+    const auto [min_second_point, max_second_point] = std::minmax_element(line_indices.begin(), line_indices.end(),
+                                                                          [&](const std::pair<uint32_t, uint32_t> &a,
+                                                                              const std::pair<uint32_t, uint32_t> &b) {
+                                                                              return points[a.second].y < points[b.second].y;
+                                                                          });
+
+    const float min_y = points[min_first_point->first].y;
+    const float max_y = points[max_first_point->first].y;
+
+    // Number of scan lines needed to cover the polygon
+    const uint32_t iterations_y = std::min(static_cast<uint32_t>(std::ceil(max_y) - std::floor(min_y)),
+                                           grid_info.height);
+
+    // The minimum and maximum area required to cover the polygon
+    const float grid_min_x = grid_info.origin.x;
+    const float grid_min_y = std::max(std::floor(min_y), std::floor(grid_info.origin.y));
+    const auto grid_width = static_cast<float>(grid_info.width);
+
+    // This iterator can iterate in either direction, wrapping at the end of the range
+    using forward_wrapping_view = forward_wrapping_view<decltype(line_indices)::iterator>;
+    using reverse_wrapping_view = reverse_wrapping_view<decltype(line_indices)::iterator>;
+
+    // Iterator for the front-facing lines of the polygon
+    const auto front_view = forward_wrapping_view(min_first_point, max_first_point, line_indices.begin(),
+                                                  line_indices.end());
+    auto front_iterator = front_view.begin();
+
+    // Iterator for the back-facing lines of the polygon
+    const auto back_view = reverse_wrapping_view(min_second_point, max_second_point, line_indices.begin(),
+                                                 line_indices.end());
+    auto back_iterator = back_view.begin();
+
+    auto front_indices = *front_iterator;
+    auto back_indices = *back_iterator;
+    float front_length_y = points[front_indices.second].y - points[front_indices.first].y;
+    float back_length_y = points[back_indices.first].y - points[back_indices.second].y;
+
+    auto front_intersection = intersectRayWithLine(grid_min_y, points[front_indices.first],
+                                                   points[front_indices.second]);
+    auto back_intersection = intersectRayWithLine(grid_min_y, points[back_indices.second],
+                                                  points[back_indices.first]);
+
+    if (!front_intersection || !back_intersection)
+        throw std::runtime_error("Intersection is null");
+
+    float line_front = front_intersection.value() - grid_min_x;
+    float line_back = back_intersection.value() - grid_min_x;
+
+    auto last_line_min = static_cast<uint32_t>(std::min(std::max(line_front, 0.0f), grid_width));
+    auto last_line_max = static_cast<uint32_t>(std::min(std::max(line_back, 0.0f), grid_width));
+
+    for (uint32_t y = 1; y < iterations_y + 1; ++y) {
+        const float absolute_y = static_cast<float>(y) + grid_min_y;
+
+        if (points[(*front_iterator).second].y < absolute_y) {
+            ++front_iterator;
+            front_indices = *front_iterator;
+
+            front_length_y = points[front_indices.second].y - points[front_indices.first].y;
+        }
+
+        if (points[(*back_iterator).first].y < absolute_y) {
+            ++back_iterator;
+            back_indices = *back_iterator;
+
+            back_length_y = points[back_indices.first].y - points[back_indices.second].y;
+        }
+
+        front_intersection = intersectRayWithLine(absolute_y, points[front_indices.first],
+                                                  points[front_indices.second]);
+        back_intersection = intersectRayWithLine(absolute_y, points[back_indices.second],
+                                                 points[back_indices.first]);
+
+        if (!front_intersection || !back_intersection)
+            throw std::runtime_error("Intersection is null");
+
+        line_front = front_intersection.value() - grid_min_x;
+        line_back = back_intersection.value() - grid_min_x;
+
+        const auto this_line_min = static_cast<uint32_t>(std::min(std::max(std::floor(line_front), 0.0f), grid_width));
+        const auto this_line_max = static_cast<uint32_t>(std::min(std::max(std::ceil(line_back), 0.0f), grid_width));
+
+        const auto line_min = std::min(last_line_min, this_line_min);
+        const auto line_max = std::max(last_line_max, this_line_max);
+
+        last_line_min = this_line_min;
+        last_line_max = this_line_max;
+
+        if (line_min > line_max) [[unlikely]]  // This should never happen in a convex polygon
+                throw std::runtime_error("Line min is greater than line max");
+
+        interpolation_info info{};
+        info.front_point_1_index = front_indices.first;
+        info.front_point_2_index = front_indices.second;
+        info.back_point_1_index = back_indices.second;
+        info.back_point_2_index = back_indices.first;
+        info.line_y = y - 1;
+        info.relative_front_y = (absolute_y - 0.5f - points[front_indices.first].y) / front_length_y;
+        info.relative_back_y = (absolute_y - 0.5f - points[back_indices.second].y) / back_length_y;
+        info.front_intersection = line_front;
+        info.back_intersection = line_back;
+        info.front_intersection_index = line_min;
+        info.back_intersection_index = line_max;
+
+        for (auto &varying: varyings)
+            varying->interpolate_row(info);
+    }
 }
 
 void rasterizer::rasterize_polygon(std::span<glm::vec2> points) {

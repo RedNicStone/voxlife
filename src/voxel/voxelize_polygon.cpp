@@ -184,12 +184,12 @@ namespace voxlife::voxel {
             world_max = glm::max(world_max, point);
         }
 
-        auto depth = static_cast<uint32_t>(std::round(projected_max.z) - std::round(projected_min.z) + 1.0f);
+        auto depth = static_cast<uint32_t>(std::ceil(projected_max.z) - std::floor(projected_min.z) + 1.0f);
 
         grid_properties grid_info{};
-        grid_info.width = static_cast<uint32_t>(std::round(projected_max.x) - std::round(projected_min.x));
-        grid_info.height = static_cast<uint32_t>(std::round(projected_max.y) - std::round(projected_min.y));
-        grid_info.origin = glm::vec2{ std::round(projected_min.x), std::round(projected_min.y) };
+        grid_info.width = static_cast<uint32_t>(std::ceil(projected_max.x) - std::floor(projected_min.x));
+        grid_info.height = static_cast<uint32_t>(std::ceil(projected_max.y) - std::floor(projected_min.y));
+        grid_info.origin = glm::vec2{ std::floor(projected_min.x), std::floor(projected_min.y) };
 
         // std::cout << "Voxelizing face with " << face.vertices.size() << " vertices" << std::endl;
         // std::cout << "Model dimensions: " << grid_info.width << " x " << grid_info.height << " x " << depth << std::endl;
@@ -214,7 +214,7 @@ namespace voxlife::voxel {
         auto depth_data = voxlife::voxel::get_smooth_varying_grid<float>(v_depth);
         std::fill(depth_data.begin(), depth_data.end(), -std::numeric_limits<float>::max());
 
-        rasterize_polygon(rasterizer, std::span(polygon));
+        rasterize_polygon_conservatively(rasterizer, std::span(polygon));
 
         auto max_size = glm::u32vec3();
         auto min_size = glm::u32vec3(std::numeric_limits<uint32_t>::max());
@@ -226,7 +226,7 @@ namespace voxlife::voxel {
 
                 max_size.x = std::max(max_size.x, x + 1);
                 max_size.y = std::max(max_size.y, y + 1);
-                max_size.z = std::max(max_size.z, static_cast<uint32_t>(std::floor(depth_value)) + 1);
+                max_size.z = std::max(max_size.z, static_cast<uint32_t>(std::ceil(depth_value)) + 1);
                 min_size.x = std::min(min_size.x, x);
                 min_size.y = std::min(min_size.y, y);
                 min_size.z = std::min(min_size.z, static_cast<uint32_t>(std::floor(depth_value)));
@@ -259,10 +259,15 @@ namespace voxlife::voxel {
                 glm::vec2 uv_value = uv_data[(y + min_size.y) * grid_info.width + x + min_size.x];
                 auto color = bilinear_sample<glm::u8vec3>(uv_value, texture.size, texture.data);
 
-                auto voxel_depth = static_cast<uint32_t>(std::floor(depth_value)) - min_size.z;
-                auto& voxel = voxels[voxel_depth * model.size.x * model.size.y + y * model.size.x + x];
-                voxel.material = WEAK_METAL;
-                voxel.color = color;
+                auto bottom_voxel_depth = static_cast<uint32_t>(std::floor(depth_value)) - min_size.z;
+                auto& bottom_voxel = voxels[bottom_voxel_depth * model.size.x * model.size.y + y * model.size.x + x];
+                bottom_voxel.material = WEAK_METAL;
+                bottom_voxel.color = color;
+                
+                auto top_voxel_depth = static_cast<uint32_t>(std::floor(depth_value + 0.5f)) - min_size.z;
+                auto& top_voxel = voxels[top_voxel_depth * model.size.x * model.size.y + y * model.size.x + x];
+                top_voxel.material = WEAK_METAL;
+                top_voxel.color = color;
             }
         }
 
