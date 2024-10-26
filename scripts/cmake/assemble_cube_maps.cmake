@@ -16,7 +16,7 @@ Options:
     -DARG_C <cubemap name> Name of the cube map to use (custom games only)
 
 Example usage:
-cmake -P assemble_cube_maps.cmake -DARG_G="/mnt/int/games/linux/steamapps/common/Half-Life" -DARG_N="hl1" -DARG_O="/home/user/path/to/mod"
+cmake -DARG_G="/mnt/int/games/linux/steamapps/common/Half-Life" -DARG_N="hl1" -DARG_O="/home/user/path/to/mod" -P assemble_cube_maps.cmake
 
 Supported games are:
     hl1
