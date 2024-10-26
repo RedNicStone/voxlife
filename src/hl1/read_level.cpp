@@ -17,6 +17,123 @@
 using namespace voxlife::voxel;
 
 namespace voxlife::hl1 {
+
+    std::array<const std::string_view, 95> default_level_names = {
+            // Black Mesa Inbound
+            "c0a0",
+            "c0a0a",
+            "c0a0b",
+            "c0a0c",
+            "c0a0d",
+            "c0a0e",
+// Anomalous Materials
+            "c1a0",
+            "c1a0d",
+            "c1a0a",
+            "c1a0b",
+            "c1a0e",
+// Unforseen Concequences
+            "c1a0c",
+            "c1a1",
+            "c1a1a",
+            "c1a1f",
+            "c1a1b",
+            "c1a1c",
+            "c1a1d",
+// Office Complex
+            "c1a2",
+            "c1a2a",
+            "c1a2b",
+            "c1a2c",
+            "c1a2d",
+// We've Got Hostiles
+            "c1a3",
+            "c1a3d",
+            "c1a3a",
+            "c1a3b",
+            "c1a3c",
+// Blast Pit
+            "c1a4",
+            "c1a4k",
+            "c1a4b",
+            "c1a4d",
+            "c1a4f",
+            "c1a4i",
+            "c1a4g",
+            "c1a4j",
+// Power Up
+            "c2a1",
+            "c2a1b",
+            "c2a1a",
+// On A Rail
+            "c2a2",
+            "c2a2a",
+            "c2a2b1",
+            "c2a2b2",
+            "c2a2c",
+            "c2a2d",
+            "c2a2e",
+            "c2a2f",
+            "c2a2g",
+            "c2a2h",
+// Apprehension
+            "c2a3",
+            "c2a3a",
+            "c2a3b",
+            "c2a3c",
+            "c2a3d",
+            "c2a3e",
+// Residue Processing
+            "c2a4",
+            "c2a4a",
+            "c2a4b",
+            "c2a4c",
+// Questionable Ethics
+            "c2a4d",
+            "c2a4e",
+            "c2a4f",
+            "c2a4g",
+// Surface Tension
+            "c2a5",
+            "c2a5w",
+            "c2a5x",
+            "c2a5a",
+            "c2a5b",
+            "c2a5c",
+            "c2a5d",
+            "c2a5e",
+            "c2a5f",
+            "c2a5g",
+// Forget About Freeman
+            "c3a1",
+            "c3a1a",
+            "c3a1b",
+// Lambda Core
+            "c3a2e",
+            "c3a2",
+            "c3a2a",
+            "c3a2b",
+            "c3a2c",
+            "c3a2d",
+            "c3a2f",
+// Xen
+            "c4a1",
+            "c4a1a",
+            "c4a1b",
+// Gonarch's Lair
+            "c4a2",
+            "c4a2a",
+            "c4a2b",
+// Interloper
+            "c4a1c",
+            "c4a1d",
+            "c4a1e",
+// Nihilanth
+            "c4a1f",
+            "c4a3",
+            "c5a1",
+    };
+
     int load_level(std::string_view game_path, std::string_view level_name) {
         std::filesystem::path game_path_fs(game_path);
 
@@ -193,6 +310,19 @@ namespace voxlife::hl1 {
         }
         wad_handles.clear();
         voxlife::bsp::release(bsp_handle);
+
+        return 0;
+    }
+
+    int load_game_levels(std::string_view game_path, std::span<const std::string_view> level_names) {
+        if (level_names.empty())
+            level_names = default_level_names;
+
+        for (auto level_name : level_names) {
+            auto result = load_level(game_path, level_name);
+            if (result != 0)
+                return result;
+        }
 
         return 0;
     }

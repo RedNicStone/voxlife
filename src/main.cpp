@@ -1,6 +1,7 @@
 
 #include <iostream>
 #include <hl1/read_level.h>
+#include <vector>
 
 
 int main(int argc, char *argv[]) {
@@ -12,10 +13,13 @@ int main(int argc, char *argv[]) {
     std::string_view game_path = argv[1];
     auto level_count = argc - 2;
 
-    for (int i = 0; i < level_count; ++i) {
-        std::string_view level_name = argv[2 + i];
-        auto result = voxlife::hl1::load_level(game_path, level_name);
-        if (result != 0)
-            return result;
-    }
+    if (level_count == 1 && std::string_view(argv[2]) == "all")
+        return voxlife::hl1::load_game_levels(game_path, {});
+
+    std::vector<std::string_view> level_names;
+    level_names.reserve(level_count);
+    for (int i = 0; i < level_count; ++i)
+        level_names.emplace_back(argv[2 + i]);
+
+    return voxlife::hl1::load_game_levels(game_path, std::span(level_names));
 }
