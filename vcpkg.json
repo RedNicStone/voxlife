@@ -1,0 +1,25 @@
+{
+  "name": "voxlife",
+  "version": "0.1.0",
+  "dependencies": [
+    {
+      "name": "daxa",
+      "features": [
+        "utils-imgui",
+        "utils-mem",
+        "utils-pipeline-manager-glslang",
+        "utils-task-graph"
+      ]
+    },
+    "glfw3",
+    {
+      "name": "imgui",
+      "features": [
+        "glfw-binding",
+        "docking-experimental"
+      ]
+    },
+    "imguizmo"
+  ],
+  "builtin-baseline": "0d14033fdcb38f20a698986529db720844c36131"
+}

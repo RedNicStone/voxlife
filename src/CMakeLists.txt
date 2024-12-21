@@ -8,8 +8,15 @@ target_include_directories(voxlife
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+find_package(daxa CONFIG REQUIRED)
+find_package(glfw3 CONFIG REQUIRED)
+find_package(imguizmo CONFIG REQUIRED)
+
 target_link_libraries(voxlife
     PRIVATE
         opengametools
         glm::glm
+        daxa::daxa
+        glfw
+        imguizmo::imguizmo
 )

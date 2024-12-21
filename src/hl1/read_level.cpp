@@ -17,6 +17,8 @@
 #include <charconv>
 #include <ranges>
 
+#include <voxel/test.h>
+
 using namespace voxlife::voxel;
 
 namespace voxlife::hl1 {
@@ -207,16 +209,11 @@ namespace voxlife::hl1 {
 
                 bsp::load_textures(bsp_handle, wad_handles);
             }
-
-            {
-                auto skybox_name = worldspawn.skyname;
-
-                auto texture = bsp::get_texture_data(bsp_handle, skybox_name);
-                auto a = 0;
-            }
         }
 
-        {
+        test_voxelization_gui(bsp_handle);
+
+        if (false) {
             auto faces = voxlife::bsp::get_model_faces(bsp_handle, 0);
             std::vector<Model> models;
             models.reserve(faces.size());
@@ -382,6 +379,7 @@ namespace voxlife::hl1 {
             level_names = default_level_names;
 
         for (auto level_name : level_names) {
+            std::cout << level_name << std::endl;
             auto result = load_level(game_path, level_name);
             if (result != 0)
                 return result;
