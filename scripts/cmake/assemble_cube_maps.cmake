@@ -18,6 +18,8 @@ Options:
 Example usage:
 cmake -DARG_G="/mnt/int/games/linux/steamapps/common/Half-Life" -DARG_N="hl1" -DARG_O="/home/user/path/to/mod" -P assemble_cube_maps.cmake
 
+cmake -DARG_G="C:/Program Files (x86)/Steam/steamapps/common/Half-Life" -DARG_N="hl1" -DARG_O="C:/Users/user/OneDrive/Documents/Teardown/mods/Mod Testing" -P assemble_cube_maps.cmake
+
 Supported games are:
     hl1
     custom (with -DARG_C <cubemap name> to define which textures to use)
@@ -78,13 +80,14 @@ find_program(CMAKE_MAKE_PROGRAM NAMES make mingw32-make)
 
 if (WIN32)
     # For MinGW (Windows)
-    execute_process(
-            COMMAND ${CMAKE_MAKE_PROGRAM} mingw-gcc-release64
-            WORKING_DIRECTORY ${CMFT_SOURCE_DIR}
-            COMMAND_ERROR_IS_FATAL ANY
-            ECHO_ERROR_VARIABLE
-    )
-    set(CUBEMAP_DDS_COMMAND ${CMFT_SOURCE_DIR}/_build/win64_mingw-gcc/bin/cmftRelease.exe)
+    # execute_process(
+    #         COMMAND ${CMAKE_MAKE_PROGRAM} vs2015
+    #         WORKING_DIRECTORY ${CMFT_SOURCE_DIR}
+    #         COMMAND_ERROR_IS_FATAL ANY
+    #         ECHO_ERROR_VARIABLE
+    # )
+    # set(CUBEMAP_DDS_COMMAND ${CMFT_SOURCE_DIR}/_build/vs2015/bin/cmftRelease.exe)
+    set(CUBEMAP_DDS_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/cmft.exe)
 elseif(UNIX)
     # For Linux
     execute_process(
@@ -129,11 +132,32 @@ endif()
 
 # Set parameters
 set(CUBEMAP_DDS_FILTERS
-        --generateMipChain false
-        --outputNum 1
-        --output0params dds,rgba32f,cubemap
-        --negYrotate180
-        --posYrotate180
+    --filter radiance
+    --srcFaceSize 256
+    --excludeBase true
+    --mipCount 20
+    --glossScale 12
+    --glossBias 3
+    --lightingModel blinnbrdf
+    --edgeFixup none
+    --dstFaceSize 256
+    # ::Processing devices
+    --numCpuProcessingThreads 4
+    --useOpenCL false
+    --clVendor anyGpuVendor
+    --deviceType gpu
+    --deviceIndex 0
+    # ::Aditional operations
+    --inputGammaNumerator 2.2
+    --inputGammaDenominator 1.0
+    --outputGammaNumerator 1.0
+    --outputGammaDenominator 1.0
+    --generateMipChain false
+    --outputNum 1
+    --output0params dds,rgba32f,cubemap
+    # Teardown-specific... It doesn't work still. Seems like it might be map dependent :/
+    --negYrotate180
+    --posYrotate180
 )
 
 # Generate the cube map

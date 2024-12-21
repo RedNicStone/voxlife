@@ -2,136 +2,139 @@
 #include <hl1/read_level.h>
 #include <hl1/read_entities.h>
 #include <bsp/read_file.h>
+#include <set>
 #include <voxel/write_file.h>
 #include <voxel/cooridnates.h>
 #include <voxel/voxelize_polygon.h>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/vec_swizzle.hpp>
+#include <glm/gtx/euler_angles.hpp>
+#include <glm/gtx/rotate_vector.hpp>
 
 #include <filesystem>
 #include <iostream>
 #include <charconv>
-
+#include <ranges>
 
 using namespace voxlife::voxel;
 
 namespace voxlife::hl1 {
 
     std::array<const std::string_view, 95> default_level_names = {
-            // Black Mesa Inbound
-            "c0a0",
-            "c0a0a",
-            "c0a0b",
-            "c0a0c",
-            "c0a0d",
-            "c0a0e",
-// Anomalous Materials
-            "c1a0",
-            "c1a0d",
-            "c1a0a",
-            "c1a0b",
-            "c1a0e",
-// Unforseen Concequences
-            "c1a0c",
-            "c1a1",
-            "c1a1a",
-            "c1a1f",
-            "c1a1b",
-            "c1a1c",
-            "c1a1d",
-// Office Complex
-            "c1a2",
-            "c1a2a",
-            "c1a2b",
-            "c1a2c",
-            "c1a2d",
-// We've Got Hostiles
-            "c1a3",
-            "c1a3d",
-            "c1a3a",
-            "c1a3b",
-            "c1a3c",
-// Blast Pit
-            "c1a4",
-            "c1a4k",
-            "c1a4b",
-            "c1a4d",
-            "c1a4f",
-            "c1a4i",
-            "c1a4g",
-            "c1a4j",
-// Power Up
-            "c2a1",
-            "c2a1b",
-            "c2a1a",
-// On A Rail
-            "c2a2",
-            "c2a2a",
-            "c2a2b1",
-            "c2a2b2",
-            "c2a2c",
-            "c2a2d",
-            "c2a2e",
-            "c2a2f",
-            "c2a2g",
-            "c2a2h",
-// Apprehension
-            "c2a3",
-            "c2a3a",
-            "c2a3b",
-            "c2a3c",
-            "c2a3d",
-            "c2a3e",
-// Residue Processing
-            "c2a4",
-            "c2a4a",
-            "c2a4b",
-            "c2a4c",
-// Questionable Ethics
-            "c2a4d",
-            "c2a4e",
-            "c2a4f",
-            "c2a4g",
-// Surface Tension
-            "c2a5",
-            "c2a5w",
-            "c2a5x",
-            "c2a5a",
-            "c2a5b",
-            "c2a5c",
-            "c2a5d",
-            "c2a5e",
-            "c2a5f",
-            "c2a5g",
-// Forget About Freeman
-            "c3a1",
-            "c3a1a",
-            "c3a1b",
-// Lambda Core
-            "c3a2e",
-            "c3a2",
-            "c3a2a",
-            "c3a2b",
-            "c3a2c",
-            "c3a2d",
-            "c3a2f",
-// Xen
-            "c4a1",
-            "c4a1a",
-            "c4a1b",
-// Gonarch's Lair
-            "c4a2",
-            "c4a2a",
-            "c4a2b",
-// Interloper
-            "c4a1c",
-            "c4a1d",
-            "c4a1e",
-// Nihilanth
-            "c4a1f",
-            "c4a3",
-            "c5a1",
+        // Black Mesa Inbound
+        "c0a0",
+        "c0a0a",
+        "c0a0b",
+        "c0a0c",
+        "c0a0d",
+        "c0a0e",
+        // Anomalous Materials
+        "c1a0",
+        "c1a0d",
+        "c1a0a",
+        "c1a0b",
+        "c1a0e",
+        // Unforseen Concequences
+        "c1a0c",
+        "c1a1",
+        "c1a1a",
+        "c1a1f",
+        "c1a1b",
+        "c1a1c",
+        "c1a1d",
+        // Office Complex
+        "c1a2",
+        "c1a2a",
+        "c1a2b",
+        "c1a2c",
+        "c1a2d",
+        // We've Got Hostiles
+        "c1a3",
+        "c1a3d",
+        "c1a3a",
+        "c1a3b",
+        "c1a3c",
+        // Blast Pit
+        "c1a4",
+        "c1a4k",
+        "c1a4b",
+        "c1a4d",
+        "c1a4f",
+        "c1a4i",
+        "c1a4g",
+        "c1a4j",
+        // Power Up
+        "c2a1",
+        "c2a1b",
+        "c2a1a",
+        // On A Rail
+        "c2a2",
+        "c2a2a",
+        "c2a2b1",
+        "c2a2b2",
+        "c2a2c",
+        "c2a2d",
+        "c2a2e",
+        "c2a2f",
+        "c2a2g",
+        "c2a2h",
+        // Apprehension
+        "c2a3",
+        "c2a3a",
+        "c2a3b",
+        "c2a3c",
+        "c2a3d",
+        "c2a3e",
+        // Residue Processing
+        "c2a4",
+        "c2a4a",
+        "c2a4b",
+        "c2a4c",
+        // Questionable Ethics
+        "c2a4d",
+        "c2a4e",
+        "c2a4f",
+        "c2a4g",
+        // Surface Tension
+        "c2a5",
+        "c2a5w",
+        "c2a5x",
+        "c2a5a",
+        "c2a5b",
+        "c2a5c",
+        "c2a5d",
+        "c2a5e",
+        "c2a5f",
+        "c2a5g",
+        // Forget About Freeman
+        "c3a1",
+        "c3a1a",
+        "c3a1b",
+        // Lambda Core
+        "c3a2e",
+        "c3a2",
+        "c3a2a",
+        "c3a2b",
+        "c3a2c",
+        "c3a2d",
+        "c3a2f",
+        // Xen
+        "c4a1",
+        "c4a1a",
+        "c4a1b",
+        // Gonarch's Lair
+        "c4a2",
+        "c4a2a",
+        "c4a2b",
+        // Interloper
+        "c4a1c",
+        "c4a1d",
+        "c4a1e",
+        // Nihilanth
+        "c4a1f",
+        "c4a3",
+        "c5a1",
     };
 
     int load_level(std::string_view game_path, std::string_view level_name) {
@@ -159,7 +162,7 @@ namespace voxlife::hl1 {
             if (worldspan_entities.empty())
                 std::cerr << "Could not find worldspawn entity" << std::endl;
 
-            auto& worldspawn = std::get<entity_types::worldspawn>(worldspan_entities[0]);
+            auto &worldspawn = std::get<entity_types::worldspawn>(worldspan_entities[0]);
 
             {
                 std::vector<std::string> wad_paths;
@@ -191,11 +194,11 @@ namespace voxlife::hl1 {
                 }
 
                 wad_handles.reserve(wad_paths.size());
-                for (auto& path : wad_paths) {
+                for (auto &path : wad_paths) {
                     wad::wad_handle wad_handle;
                     try {
                         wad::open_file(path, &wad_handle);
-                    } catch (std::exception& e) {
+                    } catch (std::exception &e) {
                         std::cerr << "Failed to open wad file " << path << ": " << e.what() << std::endl;
                     }
 
@@ -218,45 +221,58 @@ namespace voxlife::hl1 {
             std::vector<Model> models;
             models.reserve(faces.size());
 
+            std::set<std::string_view> textures;
+
             uint32_t count = 0;
-            for (auto& face : faces) {
+            for (auto &face : faces) {
                 try {
-                    models.emplace_back();
-                    voxelize_face(bsp_handle, level_name, face, count++, models.back());
-                } catch (std::exception& e) {
+                    auto texture_name = voxlife::bsp::get_texture_name(bsp_handle, face.texture_id);
+                    if (!textures.contains(texture_name)) {
+                        textures.insert(texture_name);
+                        // std::cout << "   - " << texture_name << std::endl;
+                    }
+                    if (texture_name != "SKY" && texture_name != "sky") {
+                        models.emplace_back();
+                        voxelize_face(bsp_handle, level_name, face, count++, models.back());
+                    }
+                } catch (std::exception &e) {
                     std::cerr << e.what() << std::endl;
                 }
             }
 
             std::vector<Light> lights;
             for (auto const &entity : entities.entities[static_cast<uint32_t>(voxlife::hl1::classname_type::light)]) {
-                auto& light_entity = std::get<voxlife::hl1::entity_types::light>(entity);
+                auto &light_entity = std::get<voxlife::hl1::entity_types::light>(entity);
                 lights.push_back({
-                                         .pos = glm::vec3(glm::xzy(light_entity.origin)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter),
-                                         .color = light_entity.color,
-                                         .intensity = static_cast<float>(light_entity.intensity) * (hammer_to_teardown_scale * decimeter_to_meter * 20),
-                                 });
+                    .pos = glm::vec3(glm::xzy(light_entity.origin)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter),
+                    .color = light_entity.color,
+                    .intensity = static_cast<float>(light_entity.intensity) * (hammer_to_teardown_scale * decimeter_to_meter * 20),
+                });
             }
 
             std::vector<Location> locations;
             for (auto const &entity : entities.entities[static_cast<uint32_t>(voxlife::hl1::classname_type::info_landmark)]) {
-                auto& landmark = std::get<voxlife::hl1::entity_types::info_landmark>(entity);
+                auto &landmark = std::get<voxlife::hl1::entity_types::info_landmark>(entity);
                 locations.push_back({
-                                            .name = std::string(landmark.targetname),
-                                            .pos = glm::vec3(glm::xzy(landmark.origin)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter),
-                                    });
+                    .name = std::string(landmark.targetname),
+                    .pos = glm::vec3(glm::xzy(landmark.origin)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter),
+                });
             }
 
-            auto& player_start_entities = entities.entities[static_cast<uint32_t>(voxlife::hl1::classname_type::info_player_start)];
+            auto &player_start_entities = entities.entities[static_cast<uint32_t>(voxlife::hl1::classname_type::info_player_start)];
             if (player_start_entities.empty())
                 throw std::runtime_error("Could not find player start");
 
-            auto& player_start = std::get<voxlife::hl1::entity_types::info_player_start>(player_start_entities.front());
+            auto &player_start = std::get<voxlife::hl1::entity_types::info_player_start>(player_start_entities.front());
+
+            auto &worldspawn_entities = entities.entities[static_cast<uint32_t>(voxlife::hl1::classname_type::worldspawn)];
+
+            auto &light_env_entities = entities.entities[static_cast<uint32_t>(voxlife::hl1::classname_type::light_environment)];
 
             std::vector<Trigger> triggers;
             triggers.reserve(entities.entities[static_cast<uint32_t>(voxlife::hl1::classname_type::trigger_changelevel)].size());
             for (auto const &entity : entities.entities[static_cast<uint32_t>(voxlife::hl1::classname_type::trigger_changelevel)]) {
-                auto& transition = std::get<voxlife::hl1::entity_types::trigger_changelevel>(entity);
+                auto &transition = std::get<voxlife::hl1::entity_types::trigger_changelevel>(entity);
                 if (transition.model[0] != '*') {
                     std::cerr << "Level transition trigger is an external model, skipping" << std::endl;
                     continue;
@@ -294,13 +310,60 @@ namespace voxlife::hl1 {
             info.spawn_rot = glm::vec3(0, player_start.angle + 90, 0);
 
             auto level_aabb = bsp::get_model_aabb(bsp_handle, 0);
-
             level_aabb.min = glm::vec3(glm::xzy(level_aabb.min)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter);
             level_aabb.max = glm::vec3(glm::xzy(level_aabb.max)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter);
             // Note: Necessary because the z axis is flipped
             std::swap(level_aabb.min.z, level_aabb.max.z);
 
             info.level_pos = glm::vec3(0, 128, 0) - level_aabb.min - (level_aabb.max.z - level_aabb.min.z) * 0.5f;
+
+            if (!worldspawn_entities.empty() && !light_env_entities.empty()) {
+                auto &worldspawn = std::get<voxlife::hl1::entity_types::worldspawn>(worldspawn_entities.front());
+                auto &light_env = std::get<voxlife::hl1::entity_types::light_environment>(light_env_entities.front());
+
+                info.environment.skybox = worldspawn.skyname;
+                info.environment.brightness = float(light_env.light_intensity) / 255.0f;
+                info.environment.sun_color = glm::vec3(light_env.light_color) / 255.0f;
+                auto pitch = light_env.pitch == std::numeric_limits<float>::max() ? light_env.angle_pitch : light_env.pitch;
+                auto sun_dir = glm::vec3(0, 0, 1);
+                sun_dir = glm::rotateX(sun_dir, glm::radians(pitch));
+                sun_dir = glm::rotateY(sun_dir, glm::radians(light_env.angle_yaw));
+                info.environment.sun_dir = sun_dir * glm::vec3(1, 1, 1);
+            }
+
+            std::vector<Npc> npcs;
+            auto total_npc_count = size_t{0};
+            total_npc_count += entities.entities[static_cast<uint32_t>(voxlife::hl1::classname_type::monster_scientist)].size();
+            total_npc_count += entities.entities[static_cast<uint32_t>(voxlife::hl1::classname_type::monster_barney)].size();
+            npcs.reserve(total_npc_count);
+            for (auto const &entity : entities.entities[static_cast<uint32_t>(voxlife::hl1::classname_type::monster_scientist)]) {
+                auto &scientist = std::get<voxlife::hl1::entity_types::monster_scientist>(entity);
+                auto pos = glm::vec3(glm::xzy(scientist.origin)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter);
+                auto &npc = npcs.emplace_back();
+                npc.pos = pos;
+                npc.rot = glm::vec3(0, scientist.angle + 90, 0);
+                switch (scientist.body) {
+                case -1: npc.path_name = "scientists/prefab-nerd"; break; // random
+                case 0: npc.path_name = "scientists/prefab-nerd"; break;
+                case 1: npc.path_name = "scientists/prefab-einstein"; break;
+                case 2: npc.path_name = "scientists/prefab-luther"; break;
+                case 3: npc.path_name = "scientists/prefab-slick"; break;
+                default: continue;
+                }
+            }
+            for (auto const &entity : entities.entities[static_cast<uint32_t>(voxlife::hl1::classname_type::monster_barney)]) {
+                auto &monster = std::get<voxlife::hl1::entity_types::monster_barney>(entity);
+                auto pos = glm::vec3(glm::xzy(monster.origin)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter);
+                auto rot = glm::vec3(0, monster.angle + 90, 0);
+                npcs.push_back(Npc{.path_name = "barney/prefab", .pos = pos, .rot = rot});
+            }
+            for (auto const &entity : entities.entities[static_cast<uint32_t>(voxlife::hl1::classname_type::monster_gman)]) {
+                auto &monster = std::get<voxlife::hl1::entity_types::monster_gman>(entity);
+                auto pos = glm::vec3(glm::xzy(monster.origin)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter);
+                auto rot = glm::vec3(0, monster.angle + 90, 0);
+                npcs.push_back(Npc{.path_name = "gman/prefab", .pos = pos, .rot = rot});
+            }
+            info.npcs = npcs;
 
             write_teardown_level(info);
         }
@@ -327,4 +390,4 @@ namespace voxlife::hl1 {
         return 0;
     }
 
-}
+} // namespace voxlife::hl1

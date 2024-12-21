@@ -310,7 +310,7 @@ namespace voxlife::bsp {
         if (texture_end > texture_lump_end)
             throw std::runtime_error("Texture header extends beyond end of lump");
 
-        auto texture_indices = std::span<const uint32_t>(reinterpret_cast<const uint32_t*>(texture_begin), reinterpret_cast<const uint32_t*>(texture_header_length));
+        auto texture_indices = std::span<const uint32_t>(reinterpret_cast<const uint32_t*>(texture_begin), texture_header_length);
         auto texture_index = span_at(texture_indices, texture_id);
 
         auto *mip_texture_handle = reinterpret_cast<const lump_mip_texture *>(texture_lump_begin + texture_index);

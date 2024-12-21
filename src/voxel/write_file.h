@@ -64,13 +64,28 @@ struct Trigger {
     glm::vec3 size;
 };
 
+struct Environment {
+    std::string skybox;
+    float brightness;
+    glm::vec3 sun_color;
+    glm::vec3 sun_dir; // sun rotation angles? or normalized vector??
+};
+
+struct Npc {
+    std::string path_name;
+    glm::vec3 pos;
+    glm::vec3 rot;
+};
+
 struct LevelInfo {
     std::string_view name;
     std::span<const Model> models;
     std::span<const Light> lights;
     std::span<const Location> locations;
     std::span<const Trigger> triggers;
+    std::span<const Npc> npcs;
     glm::vec3 level_pos;
+    Environment environment;
     // temp
     glm::vec3 spawn_pos;
     glm::vec3 spawn_rot;

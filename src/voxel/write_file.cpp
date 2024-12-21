@@ -354,7 +354,7 @@ void write_teardown_level(const LevelInfo &info) {
         info.name,
         info.spawn_pos.x, info.spawn_pos.y, info.spawn_pos.z,
         info.spawn_rot.x, info.spawn_rot.y, info.spawn_rot.z);
-    
+
     xml_str += std::format(
         R"(<location tags="playerspawn {}" pos="{:.3f} {:.3f} {:.3f}" rot="{:.3f} {:.3f} {:.3f}"/>)"
         "\n",
@@ -362,6 +362,23 @@ void write_teardown_level(const LevelInfo &info) {
         info.spawn_pos.x, info.spawn_pos.y, info.spawn_pos.z,
         info.spawn_rot.x, -info.spawn_rot.y, info.spawn_rot.z);
 
+    xml_str += std::format(
+        R"(<location tags="env {} tag_skybox=MOD/{}.dds tag_skyboxbrightness={} tag_sunColorTintR={:.3f} tag_sunColorTintG={:.3f} tag_sunColorTintB={:.3f} tag_sunDirX={:.3f} tag_sunDirY={:.3f} tag_sunDirZ={:.3f}"/>)"
+        "\n",
+        info.name,
+        info.environment.skybox,
+        info.environment.brightness,
+        info.environment.sun_color.r, info.environment.sun_color.g, info.environment.sun_color.b,
+        info.environment.sun_dir.x, info.environment.sun_dir.y, info.environment.sun_dir.z);
+
+    xml_str += std::format(
+        R"(<environment tags="{}" skybox="MOD/{}.dds" skyboxbrightness="{}" skyboxrot="-90" constant="0.003 0.003 0.003" ambient="1" fogParams="0 0 0 0" sunColorTint="{:.3f} {:.3f} {:.3f}" sunDir="{:.3f} {:.3f} {:.3f}" sunSpread="0"/>)"
+        "\n",
+        info.name,
+        info.environment.skybox,
+        info.environment.brightness,
+        info.environment.sun_color.r, info.environment.sun_color.g, info.environment.sun_color.b,
+        info.environment.sun_dir.x, info.environment.sun_dir.y, info.environment.sun_dir.z);
     for (auto const &location : info.locations) {
         xml_str += std::format(
             R"(<location tags="{} targetname_{}" name="{}" pos="{:.3f} {:.3f} {:.3f}"/>)"
@@ -370,6 +387,20 @@ void write_teardown_level(const LevelInfo &info) {
             location.name,
             location.name,
             location.pos.x, location.pos.y, location.pos.z);
+    }
+    for (auto const &npc : info.npcs) {
+        xml_str += std::format(
+            R"(<script tags="{}" pos="0.0 0.0 0.0" file="MOD/characters/idle-anim.lua">)"
+            "\n"
+            R"(<instance tags="{}" pos="{:.3f} {:.3f} {:.3f}" rot="{:.3f} {:.3f} {:.3f}" file="MOD/characters/{}.xml"/>)"
+            "\n"
+            R"(</script>)"
+            "\n",
+            info.name,
+            info.name,
+            npc.pos.x, npc.pos.y + 0.15f, npc.pos.z,
+            npc.rot.x, npc.rot.y, npc.rot.z,
+            npc.path_name);
     }
     for (auto const &trigger : info.triggers) {
         xml_str += std::format(

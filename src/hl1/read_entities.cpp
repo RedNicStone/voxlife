@@ -160,6 +160,35 @@ namespace voxlife::hl1 {
         }
     }
 
+    PARAMETER_CONSTRUCTOR(light_environment) {
+        switch (type) {
+            case parameter_type::angle:
+                parse_result = tag_values_from_chars(value, result.angle_yaw);
+                break;
+            case parameter_type::pitch:
+                parse_result = tag_values_from_chars(value, result.pitch);
+                break;
+            case parameter_type::light:
+                parse_result = tag_values_from_chars(value, result.light_color.r, result.light_color.g, result.light_color.b, result.light_intensity);
+                if (!parse_result)
+                    parse_result = tag_values_from_chars(value, result.light_color.r, result.light_color.g, result.light_color.b);
+                break;
+            case parameter_type::diffuse_light:
+                parse_result = tag_values_from_chars(value, result.ambient_color.r, result.ambient_color.g, result.ambient_color.b, result.ambient_intensity);
+                if (!parse_result)
+                    parse_result = tag_values_from_chars(value, result.ambient_color.r, result.ambient_color.g, result.ambient_color.b);
+                break;
+            case parameter_type::spread:
+                parse_result = tag_values_from_chars(value, result.spread);
+                break;
+            case parameter_type::classname:
+                break;
+            default:
+                std::cerr << "Unparsed parameter type: " << key << std::endl;
+                break;
+        }
+    }
+
     PARAMETER_CONSTRUCTOR(info_player_start) {
         switch (type) {
             case parameter_type::origin:
@@ -240,10 +269,72 @@ namespace voxlife::hl1 {
         }
     }
 
+    PARAMETER_CONSTRUCTOR(monster_barney) {
+        switch (type) {
+            case parameter_type::origin:
+                parse_result = tag_values_from_chars(value, result.origin.x, result.origin.y, result.origin.z);
+                break;
+            case parameter_type::targetname:
+                result.targetname = value;
+                break;
+            case parameter_type::angle:
+                parse_result = tag_values_from_chars(value, result.angle);
+                break;
+            case parameter_type::classname:
+                break;
+            default:
+                std::cerr << "Unparsed parameter type: " << key << std::endl;
+                break;
+        }
+    }
+
+    PARAMETER_CONSTRUCTOR(monster_gman) {
+        switch (type) {
+            case parameter_type::origin:
+                parse_result = tag_values_from_chars(value, result.origin.x, result.origin.y, result.origin.z);
+                break;
+            case parameter_type::targetname:
+                result.targetname = value;
+                break;
+            case parameter_type::angle:
+                parse_result = tag_values_from_chars(value, result.angle);
+                break;
+            case parameter_type::classname:
+                break;
+            default:
+                std::cerr << "Unparsed parameter type: " << key << std::endl;
+                break;
+        }
+    }
+
+    PARAMETER_CONSTRUCTOR(monster_scientist) {
+        switch (type) {
+            case parameter_type::origin:
+                parse_result = tag_values_from_chars(value, result.origin.x, result.origin.y, result.origin.z);
+                break;
+            case parameter_type::targetname:
+                result.targetname = value;
+                break;
+            case parameter_type::angle:
+                parse_result = tag_values_from_chars(value, result.angle);
+                break;
+            case parameter_type::body:
+                parse_result = tag_values_from_chars(value, result.body);
+                break;
+            case parameter_type::classname:
+                break;
+            default:
+                std::cerr << "Unparsed parameter type: " << key << std::endl;
+                break;
+        }
+    }
+
     entity construct_entity(const bsp::entity& entity, classname_type type) {
         switch (type) {
             case classname_type::light:
                 return construct_entity(entity, construct_parameter_light);
+            case classname_type::light_environment:
+                return construct_entity(entity, construct_parameter_light_environment);
             case classname_type::info_player_start:
                 return construct_entity(entity, construct_parameter_info_player_start);
             case classname_type::trigger_changelevel:
@@ -252,6 +343,12 @@ namespace voxlife::hl1 {
                 return construct_entity(entity, construct_parameter_info_landmark);
             case classname_type::worldspawn:
                 return construct_entity(entity, construct_parameter_worldspawn);
+            case classname_type::monster_barney:
+                return construct_entity(entity, construct_parameter_monster_barney);
+            case classname_type::monster_gman:
+                return construct_entity(entity, construct_parameter_monster_gman);
+            case classname_type::monster_scientist:
+                return construct_entity(entity, construct_parameter_monster_scientist);
             default:
                 //std::cerr << "Unable to parse entity type: " << classname_names[static_cast<uint32_t>(type)] << std::endl;
                 return std::monostate{};

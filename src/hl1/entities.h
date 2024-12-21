@@ -5,6 +5,7 @@
 #ifndef VOXLIFE_ENTITIES_H
 #define VOXLIFE_ENTITIES_H
 
+#include <limits>
 #include <string_view>
 #include <vector>
 #include <variant>
@@ -473,6 +474,10 @@ namespace voxlife::hl1 {
         gametitle,
         newunit,
         wad,
+        pitch,
+        diffuse_light,
+        spread,
+        body,
         PARAMETER_TYPE_MAX
     };
 
@@ -494,6 +499,10 @@ namespace voxlife::hl1 {
         "gametitle",
         "newunit",
         "wad",
+        "pitch",
+        "_diffuse_light",
+        "_spread",
+        "body",
     };
 
     struct entity_types {
@@ -502,6 +511,16 @@ namespace voxlife::hl1 {
             glm::u8vec3 color;
             uint32_t intensity = 255;
             uint32_t fade = 1;
+        };
+
+        struct light_environment {
+            float angle_pitch, angle_yaw, angle_roll;
+            float pitch = std::numeric_limits<float>::max();
+            glm::u8vec3 light_color;
+            uint32_t light_intensity = 255;
+            glm::u8vec3 ambient_color;
+            uint32_t ambient_intensity = 255;
+            float spread;
         };
 
         struct info_player_start {
@@ -528,16 +547,38 @@ namespace voxlife::hl1 {
             bool gametitle;
             bool newunit;
         };
+
+        struct monster_barney {
+            std::string_view targetname;
+            glm::ivec3 origin;
+            float angle;
+        };
+
+        struct monster_gman {
+            std::string_view targetname;
+            glm::ivec3 origin;
+            float angle;
+        };
+
+        struct monster_scientist {
+            std::string_view targetname;
+            glm::ivec3 origin;
+            float angle;
+            int body;
+        };
     };
 
     using entity = std::variant<
             std::monostate,
             entity_types::light,
+            entity_types::light_environment,
             entity_types::info_player_start,
             entity_types::trigger_changelevel,
             entity_types::info_landmark,
-            entity_types::worldspawn>;
-
+            entity_types::worldspawn,
+            entity_types::monster_barney,
+            entity_types::monster_gman,
+            entity_types::monster_scientist>;
 }
 
 #endif //VOXLIFE_ENTITIES_H

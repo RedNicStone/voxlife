@@ -128,6 +128,12 @@ namespace voxlife::voxel {
         glm::vec2 sub_texel = glm::fract(scaled_uv);
         glm::u32vec2 texel_min = glm::floor(scaled_uv);
 
+        if (texel_min.x > size.x - 1) [[unlikely]]
+            texel_min.x = 0;
+
+        if (texel_min.y > size.y - 1) [[unlikely]]
+            texel_min.y = 0;
+
         glm::u32vec2 texel_max = texel_min + glm::u32vec2(1, 1);
         if (texel_max.x > size.x - 1) [[unlikely]]
             texel_max.x = 0;
@@ -292,6 +298,8 @@ namespace voxlife::voxel {
         }
 
         std::filesystem::create_directories(std::format("brush/{}", level_name));
+
+        // std::cout << model.size.x << ", " << model.size.y << ", " << model.size.z << "\n";
 
         write_magicavoxel_model(std::format("brush/{}/{}.vox", level_name, face_index), std::span(&model, 1));
         return true;
