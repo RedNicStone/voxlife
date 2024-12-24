@@ -12,7 +12,7 @@
 
 struct Camera3D {
     float fov = 98.6f, aspect = 1.0f;
-    float near_clip = 0.01f, far_clip = 1000.0f;
+    float near_clip = 0.1f, far_clip = 3000.0f;
     glm::mat4 proj_mat{};
     glm::mat4 vtrn_mat{};
     glm::mat4 vrot_mat{};
@@ -57,7 +57,7 @@ struct Player3D {
     Camera3D camera{};
     input::Keybinds keybinds = input::DEFAULT_KEYBINDS;
     glm::vec3 pos{0, 0, 0}, vel{}, rot{};
-    float speed = 8.0f, mouse_sens = 0.1f;
+    float speed = 80.0f, mouse_sens = 0.1f;
     float sprint_speed = 5.0f;
     float sin_rot_x = 0, cos_rot_x = 1;
 
