@@ -11,7 +11,7 @@
 #endif
 #include <GLFW/glfw3native.h>
 
-auto get_native_handle(GLFWwindow* glfw_window_ptr) -> daxa::NativeWindowHandle {
+auto get_native_handle(GLFWwindow *glfw_window_ptr) -> daxa::NativeWindowHandle {
 #if defined(_WIN32)
     return glfwGetWin32Window(glfw_window_ptr);
 #elif defined(__linux__)
@@ -19,7 +19,7 @@ auto get_native_handle(GLFWwindow* glfw_window_ptr) -> daxa::NativeWindowHandle 
 #endif
 }
 
-auto get_native_platform(GLFWwindow* /*unused*/) -> daxa::NativeWindowPlatform {
+auto get_native_platform(GLFWwindow * /*unused*/) -> daxa::NativeWindowPlatform {
 #if defined(_WIN32)
     return daxa::NativeWindowPlatform::WIN32_API;
 #elif defined(__linux__)
@@ -32,6 +32,9 @@ auto get_native_platform(GLFWwindow* /*unused*/) -> daxa::NativeWindowPlatform {
 
 Application::Application() {
     t0 = Clock::now();
+}
+
+void Application::init_window() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     window.glfw_ptr = glfwCreateWindow(
@@ -41,16 +44,16 @@ Application::Application() {
     glfwSetWindowUserPointer(window.glfw_ptr, this);
     glfwSetWindowSizeCallback(
         window.glfw_ptr,
-        [](GLFWwindow* glfw_window, int width, int height) {
-            auto* self = reinterpret_cast<Application*>(glfwGetWindowUserPointer(glfw_window));
+        [](GLFWwindow *glfw_window, int width, int height) {
+            auto *self = reinterpret_cast<Application *>(glfwGetWindowUserPointer(glfw_window));
             self->window.swapchain_out_of_date = true;
             self->window.size_x = static_cast<daxa::u32>(width);
             self->window.size_y = static_cast<daxa::u32>(height);
         });
     glfwSetCursorPosCallback(
         window.glfw_ptr,
-        [](GLFWwindow* glfw_window, double x, double y) {
-            auto& app = *reinterpret_cast<Application*>(glfwGetWindowUserPointer(glfw_window));
+        [](GLFWwindow *glfw_window, double x, double y) {
+            auto &app = *reinterpret_cast<Application *>(glfwGetWindowUserPointer(glfw_window));
             if (!app.paused) {
                 float center_x = static_cast<float>(app.window.size_x / 2);
                 float center_y = static_cast<float>(app.window.size_y / 2);
@@ -61,9 +64,9 @@ Application::Application() {
         });
     glfwSetMouseButtonCallback(
         window.glfw_ptr,
-        [](GLFWwindow* glfw_window, int key_id, int action, int) {
-            auto& app = *reinterpret_cast<Application*>(glfwGetWindowUserPointer(glfw_window));
-            auto& io = ImGui::GetIO();
+        [](GLFWwindow *glfw_window, int key_id, int action, int) {
+            auto &app = *reinterpret_cast<Application *>(glfwGetWindowUserPointer(glfw_window));
+            auto &io = ImGui::GetIO();
             if (io.WantCaptureKeyboard)
                 return;
             // if (app.paused && key_id == GLFW_MOUSE_BUTTON_1 && action == GLFW_PRESS)
@@ -71,9 +74,9 @@ Application::Application() {
         });
     glfwSetKeyCallback(
         window.glfw_ptr,
-        [](GLFWwindow* glfw_window, int key_id, int, int action, int) {
-            auto& app = *reinterpret_cast<Application*>(glfwGetWindowUserPointer(glfw_window));
-            auto& io = ImGui::GetIO();
+        [](GLFWwindow *glfw_window, int key_id, int, int action, int) {
+            auto &app = *reinterpret_cast<Application *>(glfwGetWindowUserPointer(glfw_window));
+            auto &io = ImGui::GetIO();
             if (io.WantCaptureKeyboard)
                 return;
             if (key_id == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
@@ -89,12 +92,16 @@ Application::Application() {
 }
 
 Application::~Application() {
+    if (!window.glfw_ptr)
+        return;
     ImGui_ImplGlfw_Shutdown();
     glfwDestroyWindow(window.glfw_ptr);
     glfwTerminate();
 }
 
 void Application::toggle_pause() {
+    if (!window.glfw_ptr)
+        return;
     paused = !paused;
     glfwSetCursorPos(window.glfw_ptr, static_cast<double>(window.size_x / 2), static_cast<double>(window.size_y / 2));
     glfwSetInputMode(window.glfw_ptr, GLFW_CURSOR, !paused ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
@@ -102,7 +109,8 @@ void Application::toggle_pause() {
 }
 
 bool Application::update() {
-    glfwPollEvents();
+    if (window.glfw_ptr)
+        glfwPollEvents();
 
     auto t1 = Clock::now();
     float dt = std::chrono::duration<float>(t1 - t0).count();
@@ -112,6 +120,9 @@ bool Application::update() {
     player.camera.set_pos(player.pos);
     player.camera.set_rot(player.rot.x, player.rot.y);
     player.camera.resize(window.size_x, window.size_y);
+
+    if (!window.glfw_ptr)
+        return false;
 
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();

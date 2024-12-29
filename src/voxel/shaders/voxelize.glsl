@@ -142,6 +142,7 @@ layout(location = 3) in flat uint v_rotation;
 void main() {
     daxa_ImageViewId tex = daxa_ImageViewId(v_tex_id);
     vec4 tex_col = texture(daxa_sampler2D(tex, deref(push.frame_constants).sampler_llr), v_uv);
+    tex_col.a = 6; // WEAK_METAL
 
     daxa_BufferPtr(GpuModelManifest) manifest_ptr = advance(push.model_manifests, v_model_id);
     vec3 diff = (deref(manifest_ptr).aabb_max - deref(manifest_ptr).aabb_min);

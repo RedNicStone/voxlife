@@ -16,9 +16,13 @@
 
 #include "test/application.h"
 #include <thread>
+#include "write_file.h"
+
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/vec_swizzle.hpp>
 
 template <typename T>
-void upload_vector_task(daxa::TaskGraph& tg, daxa::TaskBufferView task_buffer, std::vector<T> const* data) {
+void upload_vector_task(daxa::TaskGraph &tg, daxa::TaskBufferView task_buffer, std::vector<T> const *data) {
     tg.add_task({
         .attachments = {
             daxa::inl_attachment(daxa::TaskBufferAccess::TRANSFER_WRITE, task_buffer),
@@ -31,9 +35,9 @@ void upload_vector_task(daxa::TaskGraph& tg, daxa::TaskBufferView task_buffer, s
                 .name = "my staging buffer",
             });
             ti.recorder.destroy_buffer_deferred(staging_buffer_id);
-            auto* buffer_ptr = ti.device.buffer_host_address_as<T>(staging_buffer_id).value();
+            auto *buffer_ptr = ti.device.buffer_host_address_as<T>(staging_buffer_id).value();
             memcpy(buffer_ptr, data->data(), size);
-            daxa::TaskBufferAttachmentInfo const& buffer_at_info = ti.get(task_buffer);
+            daxa::TaskBufferAttachmentInfo const &buffer_at_info = ti.get(task_buffer);
             std::span<daxa::BufferId const> runtime_ids = buffer_at_info.ids;
             daxa::BufferId id = runtime_ids[0];
             ti.recorder.copy_buffer_to_buffer({
@@ -46,7 +50,7 @@ void upload_vector_task(daxa::TaskGraph& tg, daxa::TaskBufferView task_buffer, s
     });
 }
 
-void upload_frame_constants_task(daxa::TaskGraph& tg, daxa::TaskBufferView frame_constants, FrameConstants* data) {
+void upload_frame_constants_task(daxa::TaskGraph &tg, daxa::TaskBufferView frame_constants, FrameConstants *data) {
 }
 
 
@@ -58,11 +62,16 @@ struct CpuModelManifest {
 
     glm::vec3 aabb_min{};
     glm::vec3 aabb_max{};
+    uint32_t texture_id{};
 
-    void finalize(daxa::Device& device) {
-        glm::uvec3 volume_extent = glm::round(aabb_max - aabb_min);
+    auto get_extent() const {
+        return glm::round(aabb_max - aabb_min);
+    }
+
+    void finalize(daxa::Device &device) {
+        glm::uvec3 volume_extent = glm::max(glm::vec3(1), glm::round(aabb_max - aabb_min));
         voxel_buffer = device.create_buffer({
-            .size = volume_extent.x * volume_extent.y * volume_extent.z * sizeof(Voxel),
+            .size = volume_extent.x * volume_extent.y * volume_extent.z * sizeof(GpuVoxel),
             .name = "model voxels",
         });
     }
@@ -104,7 +113,7 @@ struct VoxelizeApp : Application {
     std::vector<CpuModelManifest> model_manifests;
 };
 
-void init(VoxelizeApp* self) {
+void init(VoxelizeApp *self) {
     self->instance = daxa::create_instance({});
     self->device = self->instance.create_device_2(self->instance.choose_device({}, {}));
 
@@ -126,39 +135,39 @@ void init(VoxelizeApp* self) {
     });
 }
 
-void deinit(VoxelizeApp* self) {
+void deinit(VoxelizeApp *self) {
     self->device.wait_idle();
     self->device.collect_garbage();
 
-    for (auto const& [bsp_id, tex] : self->texture_manifests)
+    for (auto const &[bsp_id, tex] : self->texture_manifests)
         self->device.destroy_image(tex.image);
     self->device.destroy_sampler(self->sampler_llr);
     self->device.destroy_sampler(self->sampler_nnr);
-    for (auto const& model : self->model_manifests)
+    for (auto const &model : self->model_manifests)
         self->device.destroy_buffer(model.voxel_buffer);
     self->device.destroy_buffer(self->task_model_manifests.get_state().buffers[0]);
-    self->device.destroy_buffer(self->task_cube_indices.get_state().buffers[0]);
+    if (self->swapchain.is_valid()) {
+        self->device.destroy_buffer(self->task_cube_indices.get_state().buffers[0]);
+        self->device.destroy_image(self->task_depth_image.get_state().images[0]);
+    }
     self->device.destroy_buffer(self->task_vertex_buffer.get_state().buffers[0]);
     self->device.destroy_buffer(self->task_frame_constants.get_state().buffers[0]);
-    self->device.destroy_image(self->task_depth_image.get_state().images[0]);
-
-    glfwDestroyWindow(self->window.glfw_ptr);
-    glfwTerminate();
 }
 
-void init_bsp_data(VoxelizeApp* self, voxlife::bsp::bsp_handle bsp_handle) {
+void init_bsp_data(VoxelizeApp *self, voxlife::bsp::bsp_handle bsp_handle) {
     auto faces = voxlife::bsp::get_model_faces(bsp_handle, 0);
+    self->vertices.clear();
+    self->texture_manifests.clear();
+    self->model_manifests.clear();
 
     bool aabb_set = false;
     uint32_t model_id = 0;
-    uint32_t prev_texture_id = -1;
-
 
     auto to_voxel_space = [](glm::vec3 v) {
-        return glm::vec3(-v.x, v.y, v.z) * (0.0254f / 0.1f);
+        return glm::vec3(v.x, v.y, v.z) * (0.0254f / 0.1f);
     };
 
-    for (auto& face : faces) {
+    for (auto &face : faces) {
         auto texture_name = voxlife::bsp::get_texture_name(bsp_handle, face.texture_id);
         auto texture = voxlife::bsp::get_texture_data(bsp_handle, face.texture_id);
 
@@ -166,29 +175,30 @@ void init_bsp_data(VoxelizeApp* self, voxlife::bsp::bsp_handle bsp_handle) {
             continue;
 
         glm::vec3 face_aabb_min = glm::floor(to_voxel_space(face.vertices[0]));
-        glm::vec3 face_aabb_max = glm::ceil(to_voxel_space(face.vertices[0]));
-        for (auto const& v : face.vertices) {
+        glm::vec3 face_aabb_max = glm::floor(to_voxel_space(face.vertices[0]) + 1.0f);
+        for (auto const &v : face.vertices) {
             face_aabb_min = glm::min(face_aabb_min, glm::floor(to_voxel_space(v)));
-            face_aabb_max = glm::max(face_aabb_max, glm::ceil(to_voxel_space(v)));
+            face_aabb_max = glm::max(face_aabb_max, glm::floor(to_voxel_space(v) + 1.0f));
         }
 
         if (self->model_manifests.empty()) {
             CpuModelManifest model;
             model.aabb_min = face_aabb_min;
             model.aabb_max = face_aabb_max;
+            model.texture_id = face.texture_id;
             self->model_manifests.push_back(model);
         }
-        auto* model = &self->model_manifests.back();
+        auto *model = &self->model_manifests.back();
 
         auto new_aabb_min = glm::min(face_aabb_min, model->aabb_min);
         auto new_aabb_max = glm::max(face_aabb_max, model->aabb_max);
 
-        bool has_new_texture = face.texture_id != prev_texture_id;
+        bool has_new_texture = face.texture_id != model->texture_id;
         bool new_model_very_big = glm::any(glm::greaterThan(new_aabb_max - new_aabb_min, glm::vec3(250.0f)));
         bool would_double_size = glm::any(glm::greaterThan(new_aabb_max - new_aabb_min, 2.0f * (model->aabb_max - model->aabb_min)));
         bool curr_model_very_small = glm::any(glm::lessThan(model->aabb_max - model->aabb_min, glm::vec3(20.0f)));
 
-        if (new_model_very_big || (has_new_texture && !curr_model_very_small)) {
+        if (has_new_texture || new_model_very_big) {
             self->model_manifests.back().finalize(self->device);
 
             {
@@ -196,7 +206,7 @@ void init_bsp_data(VoxelizeApp* self, voxlife::bsp::bsp_handle bsp_handle) {
                 model = &self->model_manifests.back();
                 model->aabb_min = face_aabb_min;
                 model->aabb_max = face_aabb_max;
-                prev_texture_id = face.texture_id;
+                model->texture_id = face.texture_id;
             }
         }
         model->aabb_min = glm::min(face_aabb_min, model->aabb_min);
@@ -294,7 +304,10 @@ void init_bsp_data(VoxelizeApp* self, voxlife::bsp::bsp_handle bsp_handle) {
     self->task_textures.set_images({.images = texture_images});
 }
 
-void init_renderer(VoxelizeApp* self) {
+void init_renderer(VoxelizeApp *self) {
+    self->cube_indices.clear();
+    self->init_window();
+
     self->swapchain = self->device.create_swapchain({
         .native_window = get_native_handle(self->window.glfw_ptr),
         .native_window_platform = get_native_platform(self->window.glfw_ptr),
@@ -327,13 +340,14 @@ void init_renderer(VoxelizeApp* self) {
     });
 }
 
-void init_pipelines(VoxelizeApp* self) {
+void init_pipelines(VoxelizeApp *self) {
     self->pipeline_manager = daxa::PipelineManager({
         .device = self->device,
         .shader_compile_options = {
             .root_paths = {
                 DAXA_SHADER_INCLUDE_DIR,
                 "src/voxel/shaders",
+                "C:/dev/projects/cpp/voxlife/src/voxel/shaders",
             },
             .language = daxa::ShaderLanguage::GLSL,
             .enable_debug_info = true,
@@ -342,7 +356,7 @@ void init_pipelines(VoxelizeApp* self) {
         .name = "my pipeline manager",
     });
 
-    {
+    if (self->swapchain.is_valid()) {
         auto result = self->pipeline_manager.add_raster_pipeline({
             .vertex_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"main.glsl"}},
             .fragment_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"main.glsl"}},
@@ -420,8 +434,9 @@ void init_pipelines(VoxelizeApp* self) {
         if (!result.value()->is_valid())
             std::cerr << result.message() << std::endl;
         self->box_draw_pipe = result.value();
-
-        result = self->pipeline_manager.add_raster_pipeline({
+    }
+    {
+        auto result = self->pipeline_manager.add_raster_pipeline({
             .vertex_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"voxelize.glsl"}},
             .fragment_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"voxelize.glsl"}},
             .raster = {
@@ -468,15 +483,15 @@ void init_pipelines(VoxelizeApp* self) {
 
     while (!self->pipeline_manager.all_pipelines_valid()) {
         auto reload_result = self->pipeline_manager.reload_all();
-        if (auto* reload_err = daxa::get_if<daxa::PipelineReloadError>(&reload_result)) {
+        if (auto *reload_err = daxa::get_if<daxa::PipelineReloadError>(&reload_result)) {
             std::cout << reload_err->message << std::endl;
         }
     }
     std::cout << "Compiled all pipelines." << std::endl;
 }
 
-void record_frame(VoxelizeApp* self) {
-    auto& task_graph = self->loop_task_graph;
+void record_frame(VoxelizeApp *self) {
+    auto &task_graph = self->loop_task_graph;
 
     task_graph = daxa::TaskGraph({
         .device = self->device,
@@ -485,13 +500,15 @@ void record_frame(VoxelizeApp* self) {
     });
 
     task_graph.use_persistent_buffer(self->task_vertex_buffer);
-    task_graph.use_persistent_image(self->task_swapchain_image);
-    task_graph.use_persistent_image(self->task_depth_image);
     task_graph.use_persistent_image(self->task_textures);
     task_graph.use_persistent_buffer(self->task_model_manifests);
-    task_graph.use_persistent_buffer(self->task_cube_indices);
     task_graph.use_persistent_buffer(self->task_frame_constants);
     task_graph.use_persistent_buffer(self->task_model_voxels);
+    if (self->swapchain.is_valid()) {
+        task_graph.use_persistent_image(self->task_swapchain_image);
+        task_graph.use_persistent_image(self->task_depth_image);
+        task_graph.use_persistent_buffer(self->task_cube_indices);
+    }
 
     task_graph.add_task({
         .attachments = {
@@ -504,9 +521,9 @@ void record_frame(VoxelizeApp* self) {
                 .name = "my staging buffer",
             });
             ti.recorder.destroy_buffer_deferred(staging_buffer_id);
-            auto* buffer_ptr = ti.device.buffer_host_address_as<FrameConstants>(staging_buffer_id).value();
+            auto *buffer_ptr = ti.device.buffer_host_address_as<FrameConstants>(staging_buffer_id).value();
             *buffer_ptr = self->frame_constants;
-            daxa::TaskBufferAttachmentInfo const& buffer_at_info = ti.get(self->task_frame_constants);
+            daxa::TaskBufferAttachmentInfo const &buffer_at_info = ti.get(self->task_frame_constants);
             std::span<daxa::BufferId const> runtime_ids = buffer_at_info.ids;
             daxa::BufferId id = runtime_ids[0];
             ti.recorder.copy_buffer_to_buffer({
@@ -549,7 +566,7 @@ void record_frame(VoxelizeApp* self) {
             daxa::inl_attachment(daxa::TaskBufferAccess::TRANSFER_WRITE, self->task_model_voxels),
         },
         .task = [=](daxa::TaskInterface ti) {
-            for (auto const& model : self->model_manifests) {
+            for (auto const &model : self->model_manifests) {
                 auto buffer_size = ti.device.info(model.voxel_buffer).value().size;
                 ti.recorder.clear_buffer({.buffer = model.voxel_buffer, .size = buffer_size});
             }
@@ -582,118 +599,123 @@ void record_frame(VoxelizeApp* self) {
         .name = "voxelize",
     });
 
-    task_graph.add_task({
-        .attachments = {
-            daxa::inl_attachment(daxa::TaskImageAccess::COLOR_ATTACHMENT, self->task_swapchain_image),
-            daxa::inl_attachment(daxa::TaskImageAccess::DEPTH_ATTACHMENT, self->task_depth_image),
-            daxa::inl_attachment(daxa::TaskBufferAccess::VERTEX_SHADER_READ, self->task_frame_constants),
+    if (self->swapchain.is_valid()) {
+        task_graph.add_task({
+            .attachments = {
+                daxa::inl_attachment(daxa::TaskImageAccess::COLOR_ATTACHMENT, self->task_swapchain_image),
+                daxa::inl_attachment(daxa::TaskImageAccess::DEPTH_ATTACHMENT, self->task_depth_image),
+                daxa::inl_attachment(daxa::TaskBufferAccess::VERTEX_SHADER_READ, self->task_frame_constants),
 
-            daxa::inl_attachment(daxa::TaskBufferAccess::VERTEX_SHADER_READ, self->task_vertex_buffer),
-            daxa::inl_attachment(daxa::TaskImageAccess::FRAGMENT_SHADER_SAMPLED, self->task_textures),
+                daxa::inl_attachment(daxa::TaskBufferAccess::VERTEX_SHADER_READ, self->task_vertex_buffer),
+                daxa::inl_attachment(daxa::TaskImageAccess::FRAGMENT_SHADER_SAMPLED, self->task_textures),
 
-            daxa::inl_attachment(daxa::TaskBufferAccess::VERTEX_SHADER_READ, self->task_model_manifests),
-            daxa::inl_attachment(daxa::TaskBufferAccess::VERTEX_SHADER_READ, self->task_model_voxels),
-            daxa::inl_attachment(daxa::TaskBufferAccess::GRAPHICS_SHADER_READ, self->task_cube_indices),
-        },
-        .task = [=](daxa::TaskInterface ti) {
-            auto const& image_attach_info = ti.get(self->task_swapchain_image);
-            auto const& depth_attach_info = ti.get(self->task_depth_image);
-            auto image_info = ti.device.image_info(image_attach_info.ids[0]).value();
-            daxa::RenderCommandRecorder render_recorder = std::move(ti.recorder).begin_renderpass({
-                .color_attachments = std::array{
-                    daxa::RenderAttachmentInfo{
-                        .image_view = image_attach_info.view_ids[0],
-                        .load_op = daxa::AttachmentLoadOp::CLEAR,
-                        .clear_value = std::array<daxa::f32, 4>{0.1f, 0.1f, 0.1f, 1.0f},
+                daxa::inl_attachment(daxa::TaskBufferAccess::VERTEX_SHADER_READ, self->task_model_manifests),
+                daxa::inl_attachment(daxa::TaskBufferAccess::VERTEX_SHADER_READ, self->task_model_voxels),
+                daxa::inl_attachment(daxa::TaskBufferAccess::GRAPHICS_SHADER_READ, self->task_cube_indices),
+            },
+            .task = [=](daxa::TaskInterface ti) {
+                auto const &image_attach_info = ti.get(self->task_swapchain_image);
+                auto const &depth_attach_info = ti.get(self->task_depth_image);
+                auto image_info = ti.device.image_info(image_attach_info.ids[0]).value();
+                daxa::RenderCommandRecorder render_recorder = std::move(ti.recorder).begin_renderpass({
+                    .color_attachments = std::array{
+                        daxa::RenderAttachmentInfo{
+                            .image_view = image_attach_info.view_ids[0],
+                            .load_op = daxa::AttachmentLoadOp::CLEAR,
+                            .clear_value = std::array<daxa::f32, 4>{0.1f, 0.1f, 0.1f, 1.0f},
+                        },
                     },
-                },
-                .depth_attachment = daxa::RenderAttachmentInfo{
-                    .image_view = depth_attach_info.view_ids[0],
-                    .load_op = daxa::AttachmentLoadOp::CLEAR,
-                    .clear_value = daxa::DepthValue{1.0f},
-                },
-                .render_area = {.width = image_info.size.x, .height = image_info.size.y},
-            });
-
-            if (self->settings.show_mesh) {
-                render_recorder.set_pipeline(*self->triangle_draw_pipe);
-                render_recorder.push_constant(TriDrawPush{
-                    .frame_constants = ti.device_address(self->task_frame_constants.view()).value(),
-                    .vertices = ti.device_address(self->task_vertex_buffer.view()).value(),
-                    .overlay = {0, 0, 0, 0},
+                    .depth_attachment = daxa::RenderAttachmentInfo{
+                        .image_view = depth_attach_info.view_ids[0],
+                        .load_op = daxa::AttachmentLoadOp::CLEAR,
+                        .clear_value = daxa::DepthValue{1.0f},
+                    },
+                    .render_area = {.width = image_info.size.x, .height = image_info.size.y},
                 });
-                render_recorder.draw({.vertex_count = uint32_t(self->vertices.size())});
-            }
 
-            if (self->settings.show_wireframe) {
-                render_recorder.set_pipeline(*self->triangle_wire_draw_pipe);
-                render_recorder.push_constant(TriDrawPush{
-                    .frame_constants = ti.device_address(self->task_frame_constants.view()).value(),
-                    .vertices = ti.device_address(self->task_vertex_buffer.view()).value(),
-                    .overlay = {1, 1, 1, 0.1f},
-                });
-                render_recorder.draw({.vertex_count = uint32_t(self->vertices.size())});
-            }
+                if (self->settings.show_mesh) {
+                    render_recorder.set_pipeline(*self->triangle_draw_pipe);
+                    render_recorder.push_constant(TriDrawPush{
+                        .frame_constants = ti.device_address(self->task_frame_constants.view()).value(),
+                        .vertices = ti.device_address(self->task_vertex_buffer.view()).value(),
+                        .overlay = {0, 0, 0, 0},
+                    });
+                    render_recorder.draw({.vertex_count = uint32_t(self->vertices.size())});
+                }
 
-            if (self->settings.show_voxels) {
-                render_recorder.set_pipeline(*self->box_draw_pipe);
-                render_recorder.push_constant(BoxDrawPush{
-                    .frame_constants = ti.device_address(self->task_frame_constants.view()).value(),
-                    .model_manifests = ti.device_address(self->task_model_manifests.view()).value(),
-                });
-                render_recorder.set_index_buffer({
-                    .id = ti.get(self->task_cube_indices).ids[0],
-                    .index_type = daxa::IndexType::uint16,
-                });
-                render_recorder.draw_indexed({.index_count = 8, .instance_count = uint32_t(self->model_manifests.size())});
-            }
+                if (self->settings.show_wireframe) {
+                    render_recorder.set_pipeline(*self->triangle_wire_draw_pipe);
+                    render_recorder.push_constant(TriDrawPush{
+                        .frame_constants = ti.device_address(self->task_frame_constants.view()).value(),
+                        .vertices = ti.device_address(self->task_vertex_buffer.view()).value(),
+                        .overlay = {1, 1, 1, 0.1f},
+                    });
+                    render_recorder.draw({.vertex_count = uint32_t(self->vertices.size())});
+                }
 
-            ti.recorder = std::move(render_recorder).end_renderpass();
-        },
-        .name = "draw",
-    });
+                if (self->settings.show_voxels) {
+                    render_recorder.set_pipeline(*self->box_draw_pipe);
+                    render_recorder.push_constant(BoxDrawPush{
+                        .frame_constants = ti.device_address(self->task_frame_constants.view()).value(),
+                        .model_manifests = ti.device_address(self->task_model_manifests.view()).value(),
+                    });
+                    render_recorder.set_index_buffer({
+                        .id = ti.get(self->task_cube_indices).ids[0],
+                        .index_type = daxa::IndexType::uint16,
+                    });
+                    render_recorder.draw_indexed({.index_count = 8, .instance_count = uint32_t(self->model_manifests.size())});
+                }
 
-    task_graph.add_task({
-        .attachments = {
-            daxa::inl_attachment(daxa::TaskImageAccess::COLOR_ATTACHMENT, self->task_swapchain_image),
-        },
-        .task = [=](daxa::TaskInterface const& ti) {
-            self->imgui_renderer.record_commands(ImGui::GetDrawData(), ti.recorder, ti.get(self->task_swapchain_image).ids[0], self->window.size_x, self->window.size_y);
-        },
-        .name = "ImGui Task",
-    });
+                ti.recorder = std::move(render_recorder).end_renderpass();
+            },
+            .name = "draw",
+        });
+
+        task_graph.add_task({
+            .attachments = {
+                daxa::inl_attachment(daxa::TaskImageAccess::COLOR_ATTACHMENT, self->task_swapchain_image),
+            },
+            .task = [=](daxa::TaskInterface const &ti) {
+                self->imgui_renderer.record_commands(ImGui::GetDrawData(), ti.recorder, ti.get(self->task_swapchain_image).ids[0], self->window.size_x, self->window.size_y);
+            },
+            .name = "ImGui Task",
+        });
+    }
 
     task_graph.submit({});
-    task_graph.present({});
+    if (self->swapchain.is_valid())
+        task_graph.present({});
     task_graph.complete({});
 }
 
 auto t0 = Clock::now();
 
-void upload_data(VoxelizeApp* self, voxlife::bsp::bsp_handle bsp_handle) {
-    auto upload_task_graph = daxa::TaskGraph({
+void upload_data(VoxelizeApp *self, voxlife::bsp::bsp_handle bsp_handle) {
+    auto task_graph = daxa::TaskGraph({
         .device = self->device,
         .name = "upload",
     });
-    upload_task_graph.use_persistent_buffer(self->task_vertex_buffer);
-    upload_task_graph.use_persistent_image(self->task_textures);
-    upload_task_graph.use_persistent_buffer(self->task_model_manifests);
-    upload_task_graph.use_persistent_buffer(self->task_cube_indices);
-    upload_vector_task(upload_task_graph, self->task_vertex_buffer, &self->vertices);
-    upload_vector_task(upload_task_graph, self->task_cube_indices, &self->cube_indices);
+    task_graph.use_persistent_buffer(self->task_vertex_buffer);
+    task_graph.use_persistent_image(self->task_textures);
+    task_graph.use_persistent_buffer(self->task_model_manifests);
+    upload_vector_task(task_graph, self->task_vertex_buffer, &self->vertices);
+    if (self->swapchain.is_valid()) {
+        task_graph.use_persistent_buffer(self->task_cube_indices);
+        upload_vector_task(task_graph, self->task_cube_indices, &self->cube_indices);
+    }
 
     std::vector<GpuModelManifest> gpu_model_manifests;
     gpu_model_manifests.reserve(self->model_manifests.size());
-    for (auto const& model : self->model_manifests) {
+    for (auto const &model : self->model_manifests) {
         gpu_model_manifests.push_back({
             .voxels = self->device.get_device_address(model.voxel_buffer).value(),
             .aabb_min = std::bit_cast<daxa_f32vec3>(model.aabb_min),
             .aabb_max = std::bit_cast<daxa_f32vec3>(model.aabb_max),
         });
     }
-    upload_vector_task(upload_task_graph, self->task_model_manifests, &gpu_model_manifests);
+    upload_vector_task(task_graph, self->task_model_manifests, &gpu_model_manifests);
 
-    upload_task_graph.add_task({
+    task_graph.add_task({
         .attachments = {
             daxa::inl_attachment(daxa::TaskImageAccess::TRANSFER_WRITE, self->task_textures),
         },
@@ -707,7 +729,7 @@ void upload_data(VoxelizeApp* self, voxlife::bsp::bsp_handle bsp_handle) {
                     .name = "my staging buffer",
                 });
                 ti.recorder.destroy_buffer_deferred(staging_buffer_id);
-                auto* buffer_ptr = ti.device.buffer_host_address_as<unsigned char>(staging_buffer_id).value();
+                auto *buffer_ptr = ti.device.buffer_host_address_as<unsigned char>(staging_buffer_id).value();
                 for (uint32_t i = 0; i < bsp_tex.size.x * bsp_tex.size.y; ++i) {
                     buffer_ptr[i * 4 + 0] = bsp_tex.data[i].r;
                     buffer_ptr[i * 4 + 1] = bsp_tex.data[i].g;
@@ -726,13 +748,78 @@ void upload_data(VoxelizeApp* self, voxlife::bsp::bsp_handle bsp_handle) {
         .name = "upload textures",
     });
 
-    upload_task_graph.submit({});
-    upload_task_graph.complete({});
-    upload_task_graph.execute({});
+    task_graph.submit({});
+    task_graph.complete({});
+    task_graph.execute({});
 }
 
-void update(VoxelizeApp* self) {
-    auto recreate_render_image = [self](daxa::TaskImage& task_image_id) {
+void download_data(VoxelizeApp *self, std::string_view level_name, std::vector<struct Model> &models) {
+    auto task_graph = daxa::TaskGraph({
+        .device = self->device,
+        .name = "download",
+    });
+    task_graph.use_persistent_buffer(self->task_model_voxels);
+
+    auto model_buffers = std::vector<daxa::BufferId>{};
+    model_buffers.reserve(self->model_manifests.size());
+    models.reserve(self->model_manifests.size());
+
+    auto voxel_models = std::unordered_map<uint32_t, std::vector<VoxelModel>>{};
+
+    task_graph.add_task({
+        .attachments = {
+            daxa::inl_attachment(daxa::TaskBufferAccess::TRANSFER_READ, self->task_model_voxels),
+        },
+        .task = [&](daxa::TaskInterface ti) {
+            for (auto const &model : self->model_manifests) {
+                auto buffer_size = ti.device.info(model.voxel_buffer).value().size;
+                auto staging_buffer_id = ti.device.create_buffer({
+                    .size = buffer_size,
+                    .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                    .name = "my staging buffer",
+                });
+                model_buffers.push_back(staging_buffer_id);
+                ti.recorder.copy_buffer_to_buffer({
+                    .src_buffer = model.voxel_buffer,
+                    .dst_buffer = staging_buffer_id,
+                    .size = buffer_size,
+                });
+                voxel_models[model.texture_id].push_back({
+                    .voxels = std::span(ti.device.buffer_host_address_as<Voxel>(staging_buffer_id).value(), buffer_size / sizeof(Voxel)),
+                    .pos = glm::i32vec3(glm::floor((model.aabb_min + model.aabb_max) * 0.5f)),
+                    .size = model.get_extent(),
+                });
+            }
+        },
+        .name = "download data",
+    });
+
+    task_graph.submit({});
+    task_graph.complete({});
+    task_graph.execute({});
+
+    self->device.wait_idle();
+
+    std::filesystem::create_directories(std::format("brush/{}", level_name));
+    int model_index = 0;
+    for (auto const &[texture_id, voxel_model_list] : voxel_models) {
+        write_magicavoxel_model(std::format("brush/{}/{}.vox", level_name, model_index), std::span(voxel_model_list));
+
+        models.emplace_back();
+        auto &out_model = models.back();
+        out_model.name = std::format("{}", model_index);
+        out_model.size = {};
+        out_model.pos = {};
+
+        model_index++;
+    }
+
+    for (auto &buffer : model_buffers)
+        self->device.destroy_buffer(buffer);
+}
+
+void update(VoxelizeApp *self) {
+    auto recreate_render_image = [self](daxa::TaskImage &task_image_id) {
         auto image_id = task_image_id.get_state().images[0];
         auto image_info = self->device.info(image_id).value();
         self->device.destroy_image(image_id);
@@ -741,22 +828,24 @@ void update(VoxelizeApp* self) {
         task_image_id.set_images({.images = {&image_id, 1}});
     };
 
-    if (self->window.swapchain_out_of_date) {
-        recreate_render_image(self->task_depth_image);
-        self->swapchain.resize();
-        self->window.swapchain_out_of_date = false;
+    if (self->swapchain.is_valid()) {
+        if (self->window.swapchain_out_of_date) {
+            recreate_render_image(self->task_depth_image);
+            self->swapchain.resize();
+            self->window.swapchain_out_of_date = false;
+        }
+        auto swapchain_image = self->swapchain.acquire_next_image();
+        if (swapchain_image.is_empty())
+            return;
+        self->task_swapchain_image.set_images({.images = std::span{&swapchain_image, 1}});
     }
-    auto swapchain_image = self->swapchain.acquire_next_image();
-    if (swapchain_image.is_empty())
-        return;
-    self->task_swapchain_image.set_images({.images = std::span{&swapchain_image, 1}});
 
     self->pipeline_manager.reload_all();
 
     auto reload_result = self->pipeline_manager.reload_all();
-    if (auto* reload_err = daxa::get_if<daxa::PipelineReloadError>(&reload_result)) {
+    if (auto *reload_err = daxa::get_if<daxa::PipelineReloadError>(&reload_result)) {
         std::cout << reload_err->message << std::endl;
-    } else if (auto* reload_success = daxa::get_if<daxa::PipelineReloadSuccess>(&reload_result)) {
+    } else if (auto *reload_success = daxa::get_if<daxa::PipelineReloadSuccess>(&reload_result)) {
         std::cout << "SUCCESS!" << std::endl;
     }
 
@@ -791,5 +880,17 @@ void test_voxelization_gui(voxlife::bsp::bsp_handle bsp_handle) {
         update(&app);
     }
 
+    deinit(&app);
+}
+
+void voxelize_gpu(voxlife::bsp::bsp_handle bsp_handle, std::string_view level_name, std::vector<struct Model> &models) {
+    static auto app = VoxelizeApp();
+    init(&app);
+    init_bsp_data(&app, bsp_handle);
+    init_pipelines(&app);
+    upload_data(&app, bsp_handle);
+    record_frame(&app);
+    update(&app);
+    download_data(&app, level_name, models);
     deinit(&app);
 }

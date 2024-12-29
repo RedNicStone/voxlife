@@ -136,7 +136,7 @@ void kmeans(const std::vector<glm::vec3> &data_points, size_t k,
         changed = false;
         ++iterations;
 
-#pragma omp parallel for schedule(static)
+// #pragma omp parallel for schedule(static)
         for (int i = 0; i < n; ++i) {
             const glm::vec3 &point = data_points[i];
             float min_distance = std::numeric_limits<float>::max();
@@ -157,12 +157,12 @@ void kmeans(const std::vector<glm::vec3> &data_points, size_t k,
         std::fill(new_centroids.begin(), new_centroids.end(), glm::vec3(0.0f));
         std::fill(counts.begin(), counts.end(), 0);
 
-#pragma omp parallel for schedule(static)
+// #pragma omp parallel for schedule(static)
         for (int i = 0; i < n; ++i) {
             int cluster = assignments[i];
-#pragma omp atomic
+// #pragma omp atomic
             counts[cluster] += 1;
-#pragma omp critical
+// #pragma omp critical
             new_centroids[cluster] += data_points[i];
         }
 
@@ -430,13 +430,12 @@ void write_teardown_level(const LevelInfo &info) {
         auto model_filepath = std::format("MOD/brush/{}/{}.vox", info.name, model.name);
 
         xml_str += std::format(
-            R"(<voxbox name="{}" tags="{}" pos="{:.3f} {:.3f} {:.3f}" rot="{:.3f} {:.3f} {:.3f}" size="{} {} {}" brush="{}"/>)"
+            R"(<vox name="{}" tags="{}" pos="{:.3f} {:.3f} {:.3f}" rot="{:.3f} {:.3f} {:.3f}" file="{}"/>)"
             "\n",
             model_filepath,
             info.name,
             model.pos.x, model.pos.y, model.pos.z,
             model.rot.x, model.rot.y, model.rot.z,
-            model.size.x, model.size.y, model.size.z,
             model_filepath);
     }
 

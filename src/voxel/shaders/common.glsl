@@ -37,7 +37,7 @@ uint pack_color(vec4 c) {
     uint r = uint(sRGB_OETF(c.r) * 255);
     uint g = uint(sRGB_OETF(c.g) * 255);
     uint b = uint(sRGB_OETF(c.b) * 255);
-    uint a = uint(c.a * 255);
+    uint a = uint(c.a);
 
     uint result = 0;
     result = result | (r << 0x00);
@@ -53,5 +53,5 @@ vec4 unpack_color(uint color) {
         sRGB_EOTF(float((color >> 0x00) & 0xff) / 255.0),
         sRGB_EOTF(float((color >> 0x08) & 0xff) / 255.0),
         sRGB_EOTF(float((color >> 0x10) & 0xff) / 255.0),
-        float((color >> 0x10) & 0xff) / 255.0);
+        float((color >> 0x10) & 0xff));
 }

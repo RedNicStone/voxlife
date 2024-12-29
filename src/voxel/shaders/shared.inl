@@ -12,12 +12,12 @@ struct MyVertex {
 };
 DAXA_DECL_BUFFER_PTR(MyVertex)
 
-struct Voxel {
+struct GpuVoxel {
     daxa_u32 color;
 };
-DAXA_DECL_BUFFER_PTR(Voxel)
+DAXA_DECL_BUFFER_PTR(GpuVoxel)
 struct GpuModelManifest {
-    daxa_BufferPtr(Voxel) voxels;
+    daxa_BufferPtr(GpuVoxel) voxels;
     daxa_f32vec3 aabb_min;
     daxa_f32vec3 aabb_max;
 };

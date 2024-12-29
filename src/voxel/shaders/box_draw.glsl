@@ -84,15 +84,15 @@ uint get_voxel_index(ivec3 c) {
     return vp.x + vp.y * volume_extent.x + vp.z * volume_extent.x * volume_extent.y;
 }
 
-bool getVoxel(ivec3 c, in out Voxel voxel) {
+bool getVoxel(ivec3 c, in out GpuVoxel voxel) {
     uint index = get_voxel_index(c);
-    Voxel v = deref_i(deref(manifest_ptr).voxels, index);
+    GpuVoxel v = deref_i(deref(manifest_ptr).voxels, index);
     voxel = v;
-    return (v.color >> 0x18) == 255;
+    return (v.color >> 0x18) != 0;
 }
 
 const int MAX_RAY_STEPS = 256 * 3;
-float raytrace(vec3 rayPos, vec3 rayDir, vec3 aabb_min, vec3 aabb_max, in out vec3 nrm, in out Voxel voxel) {
+float raytrace(vec3 rayPos, vec3 rayDir, vec3 aabb_min, vec3 aabb_max, in out vec3 nrm, in out GpuVoxel voxel) {
     ivec3 mapPos = ivec3(floor(rayPos));
     vec3 deltaDist = abs(vec3(length(rayDir)) / rayDir);
     ivec3 rayStep = ivec3(sign(rayDir));
@@ -159,7 +159,7 @@ void main() {
     vec3 ray_direction = to_hit_pos;
     vec3 nrm = boxNormal(Box(center_ws, box_radius, vec3(1) / box_radius), Ray(ray_origin - ray_direction, ray_direction), vec3(1) / ray_direction);
 
-    Voxel voxel;
+    GpuVoxel voxel;
     float dist = raytrace(ray_origin, ray_direction, deref(manifest_ptr).aabb_min, deref(manifest_ptr).aabb_max, nrm, voxel);
     if (dist == -1)
         discard;

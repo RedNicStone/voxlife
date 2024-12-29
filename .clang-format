@@ -4,7 +4,7 @@ UseTab: Never
 TabWidth: 4
 IndentWidth: 4
 AccessModifierOffset: -2
-IndentCaseLabels: true
+IndentCaseLabels: false
 ColumnLimit: 0
 BreakBeforeBraces: Attach
 
@@ -19,4 +19,4 @@ AllowShortCaseLabelsOnASingleLine: true
 AllowShortBlocksOnASingleLine: false
 
 MaxEmptyLinesToKeep: 2
-PointerAlignment: Left
+PointerAlignment: Right

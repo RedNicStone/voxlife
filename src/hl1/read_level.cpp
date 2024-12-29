@@ -211,30 +211,28 @@ namespace voxlife::hl1 {
             }
         }
 
-        test_voxelization_gui(bsp_handle);
+        // test_voxelization_gui(bsp_handle);
 
-        if (false) {
-            auto faces = voxlife::bsp::get_model_faces(bsp_handle, 0);
+        if (true) {
             std::vector<Model> models;
-            models.reserve(faces.size());
 
-            std::set<std::string_view> textures;
-
-            uint32_t count = 0;
-            for (auto &face : faces) {
-                try {
-                    auto texture_name = voxlife::bsp::get_texture_name(bsp_handle, face.texture_id);
-                    if (!textures.contains(texture_name)) {
-                        textures.insert(texture_name);
-                        // std::cout << "   - " << texture_name << std::endl;
+            if (false) {
+                auto faces = voxlife::bsp::get_model_faces(bsp_handle, 0);
+                models.reserve(faces.size());
+                uint32_t count = 0;
+                for (auto &face : faces) {
+                    try {
+                        auto texture_name = voxlife::bsp::get_texture_name(bsp_handle, face.texture_id);
+                        if (texture_name != "SKY" && texture_name != "sky") {
+                            models.emplace_back();
+                            voxelize_face(bsp_handle, level_name, face, count++, models.back());
+                        }
+                    } catch (std::exception &e) {
+                        std::cerr << e.what() << std::endl;
                     }
-                    if (texture_name != "SKY" && texture_name != "sky") {
-                        models.emplace_back();
-                        voxelize_face(bsp_handle, level_name, face, count++, models.back());
-                    }
-                } catch (std::exception &e) {
-                    std::cerr << e.what() << std::endl;
                 }
+            } else {
+                voxelize_gpu(bsp_handle, level_name, models);
             }
 
             std::vector<Light> lights;

@@ -32,6 +32,7 @@ struct Application {
 
     Application();
     ~Application();
+    void init_window();
     void toggle_pause();
     bool update();
 };
