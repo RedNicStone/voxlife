@@ -120,6 +120,8 @@ bool Application::update() {
     ImGui::Checkbox("show mesh", &settings.show_mesh);
     ImGui::Checkbox("show wireframe", &settings.show_wireframe);
     ImGui::Checkbox("show voxels", &settings.show_voxels);
+    ImGui::Checkbox("use MSAA", &settings.use_msaa);
+    ImGui::Checkbox("use nearest sampling", &settings.use_nearest);
     ImGui::End();
 
     ImGui::Render();

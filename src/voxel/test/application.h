@@ -25,6 +25,8 @@ struct Application {
         bool show_mesh = true;
         bool show_wireframe = true;
         bool show_voxels = true;
+        bool use_msaa = true;
+        bool use_nearest = false;
     };
     Settings settings{};
 

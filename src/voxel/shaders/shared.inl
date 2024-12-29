@@ -29,6 +29,7 @@ struct FrameConstants {
     daxa_f32mat4x4 view_to_clip;
     daxa_f32mat4x4 clip_to_view;
     daxa_SamplerId sampler_llr;
+    daxa_SamplerId sampler_nnr;
     float time;
 };
 DAXA_DECL_BUFFER_PTR(FrameConstants)
