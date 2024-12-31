@@ -5,7 +5,6 @@
 #include <set>
 #include <voxel/write_file.h>
 #include <voxel/cooridnates.h>
-#include <voxel/voxelize_polygon.h>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/vec_swizzle.hpp>
@@ -17,7 +16,7 @@
 #include <charconv>
 #include <ranges>
 
-#include <voxel/test.h>
+#include <voxel/voxelize_bsp.h>
 
 using namespace voxlife::voxel;
 
@@ -234,24 +233,7 @@ namespace voxlife::hl1 {
                 }
             }
 
-            if (false) {
-                auto faces = voxlife::bsp::get_model_faces(bsp_handle, 0);
-                models.reserve(faces.size());
-                uint32_t count = 0;
-                for (auto &face : faces) {
-                    try {
-                        auto texture_name = voxlife::bsp::get_texture_name(bsp_handle, face.texture_id);
-                        if (texture_name != "SKY" && texture_name != "sky") {
-                            models.emplace_back();
-                            voxelize_face(bsp_handle, level_name, face, count++, models.back());
-                        }
-                    } catch (std::exception &e) {
-                        std::cerr << e.what() << std::endl;
-                    }
-                }
-            } else {
-                voxelize_gpu(bsp_handle, level_name, models);
-            }
+            voxelize_gpu(bsp_handle, level_name, models);
 
             std::vector<Light> lights;
             for (auto const &entity : entities.entities[static_cast<uint32_t>(voxlife::hl1::classname_type::light)]) {
