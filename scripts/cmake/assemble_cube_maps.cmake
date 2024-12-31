@@ -59,24 +59,6 @@ if(${CUBEMAP_GAME_NAME} STREQUAL "custom")
     set(CUBEMAP_CUBEMAP_NAME ${ARG_C})
 endif()
 
-# Fetch cmft from github
-message(STATUS "Fetching cmft from github")
-
-set(CMFT_SOURCE_DIR ${CMAKE_BINARY_DIR}/external/cmft)
-if(EXISTS ${CMFT_SOURCE_DIR})
-    execute_process(
-            COMMAND git -C ${CMFT_SOURCE_DIR} pull
-            COMMAND_ERROR_IS_FATAL ANY
-            ECHO_OUTPUT_VARIABLE ECHO_ERROR_VARIABLE
-    )
-else()
-    execute_process(
-            COMMAND git clone https://github.com/dariomanesku/cmft.git ${CMFT_SOURCE_DIR}
-            COMMAND_ERROR_IS_FATAL ANY
-            ECHO_OUTPUT_VARIABLE ECHO_ERROR_VARIABLE
-    )
-endif()
-
 # Build cmft
 message(STATUS "Building cmft")
 find_program(CMAKE_MAKE_PROGRAM NAMES make mingw32-make)
