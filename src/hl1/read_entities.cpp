@@ -31,6 +31,7 @@ namespace voxlife::hl1 {
     template<typename...Ts>
     bool tag_values_from_chars(std::string_view value_str, Ts&...ts) {
         auto beg = value_str.begin();
+        beg += value_str.find_first_not_of(' ');
         bool result = true;
         int index = 0;
         auto parse_single = [&](auto& x) {
@@ -142,8 +143,14 @@ namespace voxlife::hl1 {
                 break;
             case parameter_type::light:
                 parse_result = tag_values_from_chars(value, result.color.r, result.color.g, result.color.b, result.intensity);
-                if (!parse_result)
+                if (!parse_result) {
                     parse_result = tag_values_from_chars(value, result.color.r, result.color.g, result.color.b);
+                    result.intensity = 255;
+                }
+                if (!parse_result) {
+                    parse_result = tag_values_from_chars(value, result.intensity);
+                    result.color = {255, 255, 255};
+                }
                 break;
             case parameter_type::style:
                 if (value != "0" && value != "32" && value != "33")
