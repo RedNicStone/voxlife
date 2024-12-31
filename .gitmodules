@@ -4,3 +4,6 @@
 [submodule "lib/Daxa"]
 	path = lib/Daxa
 	url = https://github.com/Ipotrick/Daxa
+[submodule "scripts/cmake/external/cmft"]
+	path = scripts/cmake/external/cmft
+	url = https://github.com/dariomanesku/cmft
