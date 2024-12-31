@@ -21,5 +21,10 @@
     },
     "imguizmo"
   ],
+  "vcpkg-configuration": {
+    "overlay-ports": [
+      "./lib/Daxa"
+    ]
+  },
   "builtin-baseline": "0d14033fdcb38f20a698986529db720844c36131"
 }

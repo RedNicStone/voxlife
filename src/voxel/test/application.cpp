@@ -133,6 +133,10 @@ bool Application::update() {
     ImGui::Checkbox("show voxels", &settings.show_voxels);
     ImGui::Checkbox("use MSAA", &settings.use_msaa);
     ImGui::Checkbox("use nearest sampling", &settings.use_nearest);
+
+    ImGui::InputFloat("player speed", &player.speed);
+    ImGui::InputFloat("player sprint", &player.sprint_speed);
+
     ImGui::End();
 
     ImGui::Render();

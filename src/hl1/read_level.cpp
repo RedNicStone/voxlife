@@ -183,9 +183,16 @@ namespace voxlife::hl1 {
                         std::filesystem::path absolute_wad_path = game_path_fs;
                         std::filesystem::path relative_wad_path_fs(std::move(relative_wad_path));
 
-                        // std::filesystem doesn't have a way to remove the top-level directory, so we have to do it manually
-                        auto it = ++relative_wad_path_fs.begin();
-                        it++;
+                        auto it = relative_wad_path_fs.begin();
+                        if (relative_wad_path_fs.has_parent_path()) {
+                            // std::filesystem doesn't have a way to remove the top-level directory, so we have to do it manually
+                            // Hack because the wad path sometimes has garbage
+                            it++;
+                            it++;
+                        } else {
+                            relative_wad_path_fs = "valve" / relative_wad_path_fs;
+                            it = relative_wad_path_fs.begin();
+                        }
                         for (; it != relative_wad_path_fs.end(); ++it)
                             absolute_wad_path /= *it;
 
@@ -215,6 +222,16 @@ namespace voxlife::hl1 {
 
         if (true) {
             std::vector<Model> models;
+
+            bool has_sky = false;
+            auto faces = voxlife::bsp::get_model_faces(bsp_handle, 0);
+            for (auto &face : faces) {
+                auto texture_name = voxlife::bsp::get_texture_name(bsp_handle, face.texture_id);
+                if (texture_name == "SKY" || texture_name == "sky") {
+                    has_sky = true;
+                    break;
+                }
+            }
 
             if (false) {
                 auto faces = voxlife::bsp::get_model_faces(bsp_handle, 0);
@@ -255,10 +272,6 @@ namespace voxlife::hl1 {
             }
 
             auto &player_start_entities = entities.entities[static_cast<uint32_t>(voxlife::hl1::classname_type::info_player_start)];
-            if (player_start_entities.empty())
-                throw std::runtime_error("Could not find player start");
-
-            auto &player_start = std::get<voxlife::hl1::entity_types::info_player_start>(player_start_entities.front());
 
             auto &worldspawn_entities = entities.entities[static_cast<uint32_t>(voxlife::hl1::classname_type::worldspawn)];
 
@@ -301,8 +314,12 @@ namespace voxlife::hl1 {
             info.lights = lights;
             info.locations = locations;
             info.triggers = triggers;
-            info.spawn_pos = glm::vec3(glm::xzy(player_start.origin)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter);
-            info.spawn_rot = glm::vec3(0, player_start.angle + 90, 0);
+
+            if (!player_start_entities.empty()) {
+                auto &player_start = std::get<voxlife::hl1::entity_types::info_player_start>(player_start_entities.front());
+                info.spawn_pos = glm::vec3(glm::xzy(player_start.origin)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter);
+                info.spawn_rot = glm::vec3(0, player_start.angle + 90, 0);
+            }
 
             auto level_aabb = bsp::get_model_aabb(bsp_handle, 0);
             level_aabb.min = glm::vec3(glm::xzy(level_aabb.min)) * glm::vec3(1, 1, -1) * (hammer_to_teardown_scale * decimeter_to_meter);
@@ -312,18 +329,23 @@ namespace voxlife::hl1 {
 
             info.level_pos = glm::vec3(0, 128, 0) - level_aabb.min - (level_aabb.max.z - level_aabb.min.z) * 0.5f;
 
-            if (!worldspawn_entities.empty() && !light_env_entities.empty()) {
+            if (!worldspawn_entities.empty() && !light_env_entities.empty() && has_sky) {
                 auto &worldspawn = std::get<voxlife::hl1::entity_types::worldspawn>(worldspawn_entities.front());
                 auto &light_env = std::get<voxlife::hl1::entity_types::light_environment>(light_env_entities.front());
 
-                info.environment.skybox = worldspawn.skyname;
-                info.environment.brightness = float(light_env.light_intensity) / 255.0f;
+                info.environment.skybox = std::format("MOD/{}.dds", worldspawn.skyname);
+                info.environment.brightness = float(light_env.light_intensity) * 0.1f;
                 info.environment.sun_color = glm::vec3(light_env.light_color) / 255.0f;
                 auto pitch = light_env.pitch == std::numeric_limits<float>::max() ? light_env.angle_pitch : light_env.pitch;
                 auto sun_dir = glm::vec3(0, 0, 1);
                 sun_dir = glm::rotateX(sun_dir, glm::radians(pitch));
                 sun_dir = glm::rotateY(sun_dir, glm::radians(light_env.angle_yaw));
                 info.environment.sun_dir = sun_dir * glm::vec3(1, 1, 1);
+            } else {
+                info.environment.skybox = "cloudy.dds";
+                info.environment.brightness = 0.5f;
+                info.environment.sun_color = glm::vec3(0);
+                info.environment.sun_dir = glm::vec3(0, -1, 0);
             }
 
             std::vector<Npc> npcs;
@@ -359,6 +381,11 @@ namespace voxlife::hl1 {
                 npcs.push_back(Npc{.path_name = "gman/prefab", .pos = pos, .rot = rot});
             }
             info.npcs = npcs;
+
+            // blast-pit side levels broken?
+            // c2a2c is outside the shadow volume
+            // c2a2g wrong sky
+            // xen level transitions have weird scripted teleports?
 
             write_teardown_level(info);
         }

@@ -115,7 +115,7 @@ struct VoxelizeApp : Application {
 
 void init(VoxelizeApp *self) {
     self->instance = daxa::create_instance({});
-    self->device = self->instance.create_device_2(self->instance.choose_device({}, {}));
+    self->device = self->instance.create_device_2(self->instance.choose_device({}, {.max_allowed_buffers = 100000}));
 
     self->sampler_llr = self->device.create_sampler({
         .magnification_filter = daxa::Filter::LINEAR,
@@ -550,10 +550,10 @@ void record_frame(VoxelizeApp *self) {
         .task = [=](daxa::TaskInterface ti) {
             ti.recorder.set_pipeline(*self->voxelize_preprocess_pipe);
             ti.recorder.push_constant(VoxelizeDrawPush{
-                .frame_constants = ti.device_address(self->task_frame_constants.view()).value(),
-                .model_manifests = ti.device_address(self->task_model_manifests.view()).value(),
-                .vertices = ti.device_address(self->task_vertex_buffer.view()).value(),
-                .processed_vertices = ti.device_address(task_processed_vertex_buffer).value(),
+                .frame_constants = ti.device.buffer_device_address(ti.get(self->task_frame_constants.view()).ids[0]).value(),
+                .model_manifests = ti.device.buffer_device_address(ti.get(self->task_model_manifests.view()).ids[0]).value(),
+                .vertices = ti.device.buffer_device_address(ti.get(self->task_vertex_buffer.view()).ids[0]).value(),
+                .processed_vertices = ti.device.buffer_device_address(ti.get(task_processed_vertex_buffer).ids[0]).value(),
                 .triangle_count = uint32_t(self->vertices.size() / 3),
             });
             ti.recorder.dispatch({uint32_t(self->vertices.size() / 3 + 127) / 128, 1, 1});
@@ -567,7 +567,7 @@ void record_frame(VoxelizeApp *self) {
         },
         .task = [=](daxa::TaskInterface ti) {
             for (auto const &model : self->model_manifests) {
-                auto buffer_size = ti.device.info(model.voxel_buffer).value().size;
+                auto buffer_size = ti.device.buffer_info(model.voxel_buffer).value().size;
                 ti.recorder.clear_buffer({.buffer = model.voxel_buffer, .size = buffer_size});
             }
         },
@@ -588,9 +588,9 @@ void record_frame(VoxelizeApp *self) {
             });
             render_recorder.set_pipeline(self->settings.use_msaa ? *self->voxelize_draw_msaa_pipe : *self->voxelize_draw_pipe);
             render_recorder.push_constant(VoxelizeDrawPush{
-                .frame_constants = ti.device_address(self->task_frame_constants.view()).value(),
-                .model_manifests = ti.device_address(self->task_model_manifests.view()).value(),
-                .processed_vertices = ti.device_address(task_processed_vertex_buffer).value(),
+                .frame_constants = ti.device.buffer_device_address(ti.get(self->task_frame_constants.view()).ids[0]).value(),
+                .model_manifests = ti.device.buffer_device_address(ti.get(self->task_model_manifests.view()).ids[0]).value(),
+                .processed_vertices = ti.device.buffer_device_address(ti.get(task_processed_vertex_buffer).ids[0]).value(),
                 .triangle_count = uint32_t(self->vertices.size() / 3),
             });
             render_recorder.draw({.vertex_count = uint32_t(self->vertices.size())});
@@ -636,8 +636,8 @@ void record_frame(VoxelizeApp *self) {
                 if (self->settings.show_mesh) {
                     render_recorder.set_pipeline(*self->triangle_draw_pipe);
                     render_recorder.push_constant(TriDrawPush{
-                        .frame_constants = ti.device_address(self->task_frame_constants.view()).value(),
-                        .vertices = ti.device_address(self->task_vertex_buffer.view()).value(),
+                        .frame_constants = ti.device.buffer_device_address(ti.get(self->task_frame_constants.view()).ids[0]).value(),
+                        .vertices = ti.device.buffer_device_address(ti.get(self->task_vertex_buffer.view()).ids[0]).value(),
                         .overlay = {0, 0, 0, 0},
                     });
                     render_recorder.draw({.vertex_count = uint32_t(self->vertices.size())});
@@ -646,8 +646,8 @@ void record_frame(VoxelizeApp *self) {
                 if (self->settings.show_wireframe) {
                     render_recorder.set_pipeline(*self->triangle_wire_draw_pipe);
                     render_recorder.push_constant(TriDrawPush{
-                        .frame_constants = ti.device_address(self->task_frame_constants.view()).value(),
-                        .vertices = ti.device_address(self->task_vertex_buffer.view()).value(),
+                        .frame_constants = ti.device.buffer_device_address(ti.get(self->task_frame_constants.view()).ids[0]).value(),
+                        .vertices = ti.device.buffer_device_address(ti.get(self->task_vertex_buffer.view()).ids[0]).value(),
                         .overlay = {1, 1, 1, 0.1f},
                     });
                     render_recorder.draw({.vertex_count = uint32_t(self->vertices.size())});
@@ -656,8 +656,8 @@ void record_frame(VoxelizeApp *self) {
                 if (self->settings.show_voxels) {
                     render_recorder.set_pipeline(*self->box_draw_pipe);
                     render_recorder.push_constant(BoxDrawPush{
-                        .frame_constants = ti.device_address(self->task_frame_constants.view()).value(),
-                        .model_manifests = ti.device_address(self->task_model_manifests.view()).value(),
+                        .frame_constants = ti.device.buffer_device_address(ti.get(self->task_frame_constants.view()).ids[0]).value(),
+                        .model_manifests = ti.device.buffer_device_address(ti.get(self->task_model_manifests.view()).ids[0]).value(),
                     });
                     render_recorder.set_index_buffer({
                         .id = ti.get(self->task_cube_indices).ids[0],
@@ -708,7 +708,7 @@ void upload_data(VoxelizeApp *self, voxlife::bsp::bsp_handle bsp_handle) {
     gpu_model_manifests.reserve(self->model_manifests.size());
     for (auto const &model : self->model_manifests) {
         gpu_model_manifests.push_back({
-            .voxels = self->device.get_device_address(model.voxel_buffer).value(),
+            .voxels = self->device.buffer_device_address(model.voxel_buffer).value(),
             .aabb_min = std::bit_cast<daxa_f32vec3>(model.aabb_min),
             .aabb_max = std::bit_cast<daxa_f32vec3>(model.aabb_max),
         });
@@ -772,7 +772,7 @@ void download_data(VoxelizeApp *self, std::string_view level_name, std::vector<s
         },
         .task = [&](daxa::TaskInterface ti) {
             for (auto const &model : self->model_manifests) {
-                auto buffer_size = ti.device.info(model.voxel_buffer).value().size;
+                auto buffer_size = ti.device.buffer_info(model.voxel_buffer).value().size;
                 auto staging_buffer_id = ti.device.create_buffer({
                     .size = buffer_size,
                     .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
@@ -784,11 +784,14 @@ void download_data(VoxelizeApp *self, std::string_view level_name, std::vector<s
                     .dst_buffer = staging_buffer_id,
                     .size = buffer_size,
                 });
-                voxel_models[model.texture_id].push_back({
+
+                auto voxel_model = VoxelModel{
                     .voxels = std::span(ti.device.buffer_host_address_as<Voxel>(staging_buffer_id).value(), buffer_size / sizeof(Voxel)),
                     .pos = glm::i32vec3(glm::floor((model.aabb_min + model.aabb_max) * 0.5f)),
                     .size = model.get_extent(),
-                });
+                };
+                if (all(lessThanEqual(voxel_model.size, glm::uvec3(256))))
+                    voxel_models[model.texture_id].push_back(voxel_model);
             }
         },
         .name = "download data",
@@ -801,8 +804,11 @@ void download_data(VoxelizeApp *self, std::string_view level_name, std::vector<s
     self->device.wait_idle();
 
     std::filesystem::create_directories(std::format("brush/{}", level_name));
-    int model_index = 0;
-    for (auto const &[texture_id, voxel_model_list] : voxel_models) {
+
+    for (int model_index = 0; model_index < voxel_models.size(); ++model_index) {
+        auto it = voxel_models.begin();
+        std::advance(it, model_index);
+        auto const &[texture_id, voxel_model_list] = *it;
         write_magicavoxel_model(std::format("brush/{}/{}.vox", level_name, model_index), std::span(voxel_model_list));
 
         models.emplace_back();
@@ -810,8 +816,6 @@ void download_data(VoxelizeApp *self, std::string_view level_name, std::vector<s
         out_model.name = std::format("{}", model_index);
         out_model.size = {};
         out_model.pos = {};
-
-        model_index++;
     }
 
     for (auto &buffer : model_buffers)
@@ -821,7 +825,7 @@ void download_data(VoxelizeApp *self, std::string_view level_name, std::vector<s
 void update(VoxelizeApp *self) {
     auto recreate_render_image = [self](daxa::TaskImage &task_image_id) {
         auto image_id = task_image_id.get_state().images[0];
-        auto image_info = self->device.info(image_id).value();
+        auto image_info = self->device.image_info(image_id).value();
         self->device.destroy_image(image_id);
         image_info.size = {self->window.size_x, self->window.size_y, 1},
         image_id = self->device.create_image(image_info);

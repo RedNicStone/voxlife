@@ -25,7 +25,7 @@ set(CMAKE_CXX_STANDARD 23)
 # todo: Ofast may cause issues, more testing is needed
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -march=native -mtune=native -fopenmp")
+        set(CMAKE_CXX_FLAGS_RELEASE "-Ofast-math -march=native -mtune=native -fopenmp")
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
         set(CMAKE_CXX_FLAGS "/openmp:experimental")
     else()

@@ -174,15 +174,20 @@ function tick()
         SpawnLevel(globals.curr_level)
     end
 
+    DebugWatch("hovering trigger", nil)
+
     for trigger_i = 1, #globals.changelevel_triggers do
         local trigger = globals.changelevel_triggers[trigger_i]
         DebugChangeLevelTrigger(trigger)
 
-        local trigger_override = false
-        if InputDown('e') then
-            local pMin, pMax = GetTriggerBounds(trigger)
-            local _, rayPos, _, rayDir = GetPlayerAimInfo(GetPlayerEyeTransform().pos)
-            trigger_override = RaycastBox(rayPos, rayDir, pMin, pMax)
+        local pMin, pMax = GetTriggerBounds(trigger)
+        local _, rayPos, _, rayDir = GetPlayerAimInfo(GetPlayerEyeTransform().pos)
+        local hovering_trigger = RaycastBox(rayPos, rayDir, pMin, pMax)
+        local trigger_override = InputDown('e') and hovering_trigger
+
+        if hovering_trigger then
+            local dst_level_name = GetTagValue(trigger, "map")
+            DebugWatch("hovering trigger", dst_level_name)
         end
 
         if trigger_override or IsPointInTrigger(trigger, GetPlayerTransform().pos) then
@@ -235,6 +240,12 @@ local function DrawChapterTitle(name, animTime)
     UiPop()
 end
 
+local function TryDrawChapterTitle(first_level, name, time)
+    if globals.curr_level == first_level and time - globals.last_changelevel_time < 2 then
+        DrawChapterTitle(name, time - globals.last_changelevel_time)
+    end
+end
+
 local function fract(x)
     local _, ret = math.modf(x)
     return ret
@@ -248,7 +259,22 @@ function draw()
 
     local time = GetTime()
 
-    if globals.curr_level == "c1a0" and time - globals.last_changelevel_time < 2 then
-        DrawChapterTitle("ANOMALOUS MATERIALS", time - globals.last_changelevel_time)
-    end
+    -- TODO: Add text for the intro sequence
+    TryDrawChapterTitle("c1a0", "ANOMALOUS MATERIALS", time)
+    TryDrawChapterTitle("c1a0c", "UNFORESEEN CONSEQUENCES", time)
+    TryDrawChapterTitle("c1a2", "OFFICE COMPLEX", time)
+    TryDrawChapterTitle("c1a3", "\"WE'VE GOT HOSTILES\"", time)
+    TryDrawChapterTitle("c1a4", "BLAST PIT", time)
+    TryDrawChapterTitle("c2a1", "POWER UP", time)
+    TryDrawChapterTitle("c2a2", "ON A RAIL", time)
+    TryDrawChapterTitle("c2a3", "APPREHENSION", time)
+    TryDrawChapterTitle("c2a4", "RESIDUE PROCESSING", time)
+    TryDrawChapterTitle("c2a4d", "QUESTIONABLE ETHICS", time)
+    TryDrawChapterTitle("c2a5", "SURFACE TENSION", time)
+    TryDrawChapterTitle("c3a1", "\"FORGET ABOUT FREEMAN!\"", time)
+    TryDrawChapterTitle("c3a2e", "LAMBDA CORE", time)
+    TryDrawChapterTitle("c4a1", "XEN", time)
+    TryDrawChapterTitle("c4a2", "GONARCH'S LAIR", time)
+    TryDrawChapterTitle("c4a1a", "INTERLOPER", time)
+    TryDrawChapterTitle("c4a3", "NIHILANTH", time)
 end

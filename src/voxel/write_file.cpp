@@ -69,21 +69,21 @@ struct MaterialTypeSlot {
 };
 
 constexpr std::array<MaterialTypeSlot, MATERIAL_TYPE_MAX> material_type_slots{{
-    {0, 0},    // AIR
-    {16, 224}, // UN_PHYSICAL
-    {8, 176},  // HARD_MASONRY
-    {8, 168},  // HARD_METAL
-    {16, 152}, // PLASTIC
-    {16, 136}, // HEAVY_METAL
-    {16, 120}, // WEAK_METAL
-    {16, 104}, // PLASTER
-    {16, 88},  // BRICK
-    {16, 72},  // CONCRETE
-    {16, 56},  // WOOD
-    {16, 40},  // ROCK
-    {16, 24},  // DIRT
-    {16, 8},   // GRASS
-    {8, 0},    // GLASS
+    {0, 1},    // AIR
+    {16, 225}, // UN_PHYSICAL
+    {8, 177},  // HARD_MASONRY
+    {8, 169},  // HARD_METAL
+    {16, 153}, // PLASTIC
+    {16, 137}, // HEAVY_METAL
+    {16, 121}, // WEAK_METAL
+    {16, 105}, // PLASTER
+    {16, 89},  // BRICK
+    {16, 73},  // CONCRETE
+    {16, 57},  // WOOD
+    {16, 41},  // ROCK
+    {16, 25},  // DIRT
+    {16, 9},   // GRASS
+    {8, 1},    // GLASS
     {253, 1},  // MATERIAL_ALL_TYPES
 }};
 
@@ -136,7 +136,6 @@ void kmeans(const std::vector<glm::vec3> &data_points, size_t k,
         changed = false;
         ++iterations;
 
-// #pragma omp parallel for schedule(static)
         for (int i = 0; i < n; ++i) {
             const glm::vec3 &point = data_points[i];
             float min_distance = std::numeric_limits<float>::max();
@@ -157,12 +156,9 @@ void kmeans(const std::vector<glm::vec3> &data_points, size_t k,
         std::fill(new_centroids.begin(), new_centroids.end(), glm::vec3(0.0f));
         std::fill(counts.begin(), counts.end(), 0);
 
-// #pragma omp parallel for schedule(static)
         for (int i = 0; i < n; ++i) {
             int cluster = assignments[i];
-// #pragma omp atomic
             counts[cluster] += 1;
-// #pragma omp critical
             new_centroids[cluster] += data_points[i];
         }
 
@@ -213,7 +209,6 @@ auto generate_palette(std::span<const VoxelModel> models) -> std::pair<ogt_vox_p
     for (size_t i = 0; i < models.size(); ++i)
         model_indices[i].resize(models[i].voxels.size());
 
-#pragma omp parallel for schedule(dynamic)
     for (int material = 0; material < MaterialType::MATERIAL_TYPE_MAX; ++material) {
         auto &mat_data = materials_data[material];
         const auto &mat_info = material_type_slots[material];
@@ -363,7 +358,7 @@ void write_teardown_level(const LevelInfo &info) {
         info.spawn_rot.x, -info.spawn_rot.y, info.spawn_rot.z);
 
     xml_str += std::format(
-        R"(<location tags="env {} tag_skybox=MOD/{}.dds tag_skyboxbrightness={} tag_sunColorTintR={:.3f} tag_sunColorTintG={:.3f} tag_sunColorTintB={:.3f} tag_sunDirX={:.3f} tag_sunDirY={:.3f} tag_sunDirZ={:.3f}"/>)"
+        R"(<location tags="env {} tag_skybox={} tag_skyboxbrightness={} tag_sunColorTintR={:.3f} tag_sunColorTintG={:.3f} tag_sunColorTintB={:.3f} tag_sunDirX={:.3f} tag_sunDirY={:.3f} tag_sunDirZ={:.3f}"/>)"
         "\n",
         info.name,
         info.environment.skybox,
@@ -372,7 +367,7 @@ void write_teardown_level(const LevelInfo &info) {
         info.environment.sun_dir.x, info.environment.sun_dir.y, info.environment.sun_dir.z);
 
     xml_str += std::format(
-        R"(<environment tags="{}" skybox="MOD/{}.dds" skyboxbrightness="{}" skyboxrot="-90" constant="0.003 0.003 0.003" ambient="1" fogParams="0 0 0 0" sunColorTint="{:.3f} {:.3f} {:.3f}" sunDir="{:.3f} {:.3f} {:.3f}" sunSpread="0"/>)"
+        R"(<environment tags="{}" skybox="{}" skyboxbrightness="{}" skyboxrot="-90" constant="0.003 0.003 0.003" ambient="1" fogParams="0 0 0 0" sunColorTint="{:.3f} {:.3f} {:.3f}" sunDir="{:.3f} {:.3f} {:.3f}" sunSpread="0"/>)"
         "\n",
         info.name,
         info.environment.skybox,
@@ -420,9 +415,9 @@ void write_teardown_level(const LevelInfo &info) {
             "\n",
             info.name,
             light.pos.x, light.pos.y, light.pos.z,
-            float(light.color.r) / 255.0f,
-            float(light.color.g) / 255.0f,
-            float(light.color.b) / 255.0f,
+            float(light.color.r) * (1.0f / 255.0f),
+            float(light.color.g) * (1.0f / 255.0f),
+            float(light.color.b) * (1.0f / 255.0f),
             float(light.intensity) * 0.1f);
     }
 
