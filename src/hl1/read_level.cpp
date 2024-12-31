@@ -23,7 +23,7 @@ using namespace voxlife::voxel;
 
 namespace voxlife::hl1 {
 
-    std::array<const std::string_view, 95> default_level_names = {
+    std::array<const std::string_view, 96> default_level_names = {
         // Black Mesa Inbound
         "c0a0",
         "c0a0a",
@@ -37,7 +37,7 @@ namespace voxlife::hl1 {
         "c1a0a",
         "c1a0b",
         "c1a0e",
-        // Unforseen Concequences
+        // Unforseen Consequences
         "c1a0c",
         "c1a1",
         "c1a1a",
@@ -62,6 +62,7 @@ namespace voxlife::hl1 {
         "c1a4k",
         "c1a4b",
         "c1a4d",
+        "c1a4e",
         "c1a4f",
         "c1a4i",
         "c1a4g",
@@ -123,13 +124,13 @@ namespace voxlife::hl1 {
         "c3a2f",
         // Xen
         "c4a1",
-        "c4a1a",
-        "c4a1b",
         // Gonarch's Lair
         "c4a2",
         "c4a2a",
         "c4a2b",
         // Interloper
+        "c4a1a",
+        "c4a1b",
         "c4a1c",
         "c4a1d",
         "c4a1e",
