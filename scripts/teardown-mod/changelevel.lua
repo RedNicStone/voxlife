@@ -246,11 +246,6 @@ local function TryDrawChapterTitle(first_level, name, time)
     end
 end
 
-local function fract(x)
-    local _, ret = math.modf(x)
-    return ret
-end
-
 function draw()
     if globals.level_load_trigger then
         DrawLoading()

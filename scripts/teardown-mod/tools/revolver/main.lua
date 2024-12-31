@@ -87,7 +87,7 @@ function revolver:tick(dt)
 
 		local b = GetToolBody()
 		local voxSize = 0.3
-		local attach = Transform(Vec(0.5*voxSize, -8.5*voxSize, 0), Quat())
+		local attach = Transform(Vec(0.5*voxSize, -1.5*voxSize, 0), Quat())
 		local handsTransform = Transform()
 		local leftHandTransform = self.toolAnimator.leftHand.transform
 		local righHandTransform = self.toolAnimator.rightHand.transform
@@ -101,9 +101,9 @@ function revolver:tick(dt)
 				self.shapeOriginalTransforms[i] = TransformToLocalTransform(attach, GetShapeLocalTransform(self.shapes[i]))
 			end
 		end
-		attach.pos[3] = recoil
+		attach.pos[3] = 0.3*recoil
 		attach.rot = QuatEuler(300*recoil, 0, 0)
-		handsTransform.pos[3] = recoil
+		handsTransform.pos[3] = 0.1*recoil
 		handsTransform.rot = QuatEuler(300*recoil, 0, 0)
 		righHandTransform = TransformToParentTransform(handsTransform, righHandTransform)
 		for i = 1, #self.shapes do

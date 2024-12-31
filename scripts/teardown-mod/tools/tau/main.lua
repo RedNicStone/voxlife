@@ -194,12 +194,13 @@ function tau:tick(dt)
 				self.shapeOriginalTransforms[i] = TransformToLocalTransform(attach, GetShapeLocalTransform(self.shapes[i]))
 			end
 		end
-		-- attach.pos[1] = 0.3*recoil
-		-- attach.pos[2] = attach.pos[2]+2.0*recoil
-		-- attach.rot = QuatEuler(300*recoil, 0, 0)
-		-- handsTransform.pos[3] = 0.3*recoil
-		-- handsTransform.rot = QuatEuler(300*recoil, 0, 0)
-		-- righHandTransform = TransformToParentTransform(handsTransform, righHandTransform)
+		attach.pos[1] = 0.1*recoil
+		attach.pos[2] = 2.0*recoil + attach.pos[2]
+		attach.rot = QuatEuler(200*recoil, 0, 0)
+		handsTransform.pos[3] = 0.3*recoil
+		handsTransform.pos[2] = 2.0*recoil
+		handsTransform.rot = QuatEuler(200*recoil, 0, 0)
+		righHandTransform = TransformToParentTransform(handsTransform, righHandTransform)
 		for i = 1, #self.shapes do
 			t = TransformToParentTransform(attach, self.shapeOriginalTransforms[i])
 			SetShapeLocalTransform(self.shapes[i], t)

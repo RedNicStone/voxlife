@@ -1,15 +1,23 @@
 <prefab version="1.6.2">
-	<group name="instance=MOD/tools/tau/prefab.xml" pos="1.07 0.76 0.3" rot="0.0 0.0 0.0">
-		<body pos="-0.71 0.44 0.92" rot="3.0 1.9 2.0" dynamic="false">
-			<vox pos="0.22488 -0.42027 -0.82533" file="MOD/tools/tau/model.vox" object="gun" scale="0.25"/>
-			<vox pos="0.23788 -0.49277 -0.30033" file="MOD/tools/tau/model.vox" object="stock" scale="0.25"/>
-			<vox pos="0.16238 -0.34777 -0.50033" file="MOD/tools/tau/model.vox" object="spin" scale="0.25"/>
-			<vox pos="0.31537 -0.36227 -0.50083" rot="0 0 120" file="MOD/tools/tau/model.vox" object="spin" scale="0.25"/>
-			<vox pos="0.24788 -0.22227 -0.50083" rot="0 0 240" file="MOD/tools/tau/model.vox" object="spin" scale="0.25"/>
-			<location name="tp_action_lh" tags="name=tp_action_lh ik_hand" pos="0.16594 -0.41438 -0.4144" rot="0.0 90.0 0.0"/>
-			<location name="tp_action_rh" tags="name=tp_action_rh ik_hand" pos="0.29593 -0.41438 -0.4144" rot="0.0 90.0 0.0"/>
-			<location name="muzzle_right" tags="name=muzzle_right" pos="0.24094 -0.30938 -1.3704" rot="0.0 0.0 0.0"/>
-		</body>
+	<group name="instance=MOD/tools/tau/prefab.xml" pos="0.1 0.0 0.0" rot="0.0 0.0 0.0">
+		<group name="eye_space" pos="0.0 0.0 0.0">
+			<location name="fp_action" tags="name=fp_action" pos="0.0 -0.7 -1.2" rot="0.0 0.0 0.0"/>
+			<location name="tp_action" tags="name=tp_action" pos="0.0 -0.7 -0.5" rot="0.0 0.0 0.0"/>
+			<location name="tp_run" tags="name=tp_run" pos="0.0 -0.7 -0.5" rot="0.0 0.0 0.0"/>
+			<location name="tp_crouch" tags="name=tp_crouch" pos="0.0 -0.7 -0.5" rot="0.0 0.0 0.0"/>
+		</group>
+		<group name="tool_space" pos="0.0 0.0 0.0">
+			<body dynamic="false">
+				<vox pos="0.29965 0.06507 0.07298" file="MOD/tools/tau/model.vox" object="gun" scale="0.25"/>
+				<vox pos="0.31265 -0.00743 0.59798" file="MOD/tools/tau/model.vox" object="stock" scale="0.25"/>
+				<vox pos="0.23715 0.13757 0.39798" file="MOD/tools/tau/model.vox" object="spin" scale="0.25"/>
+				<vox pos="0.39014 0.12307 0.39748" rot="0 0 120" file="MOD/tools/tau/model.vox" object="spin" scale="0.25"/>
+				<vox pos="0.32265 0.26307 0.39748" rot="0 0 240" file="MOD/tools/tau/model.vox" object="spin" scale="0.25"/>
+			</body>
+			<location name="tp_action_lh" tags="name=tp_action_lh ik_hand" pos="0.19594 0.06562 0.1456" rot="0.0 90.0 0.0"/>
+			<location name="tp_action_rh" tags="name=tp_action_rh ik_hand" pos="0.38593 0.02562 0.4856" rot="0.0 90.0 0.0"/>
+			<location name="muzzle_right" tags="name=muzzle_right" pos="0.313 0.18 -0.48"/>
+		</group>
 	</group>
 </prefab>
 

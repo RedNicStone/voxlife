@@ -101,10 +101,10 @@ function glock:tick(dt)
 				self.shapeOriginalTransforms[i] = TransformToLocalTransform(attach, GetShapeLocalTransform(self.shapes[i]))
 			end
 		end
-		attach.pos[3] = recoil
-		attach.rot = QuatEuler(300*recoil, 0, 0)
-		handsTransform.pos[3] = recoil
-		handsTransform.rot = QuatEuler(300*recoil, 0, 0)
+		attach.pos[3] = 0.3*recoil
+		attach.rot = QuatEuler(100*recoil, 0, 0)
+		handsTransform.pos[3] = 0.3*recoil
+		handsTransform.rot = QuatEuler(100*recoil, 0, 0)
 		righHandTransform = TransformToParentTransform(handsTransform, righHandTransform)
 		for i = 1, #self.shapes do
 			t = TransformToParentTransform(attach, self.shapeOriginalTransforms[i])
