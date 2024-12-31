@@ -1,0 +1,97 @@
+[Gordon Freeman]
+description=Science Team Member
+preview=characters/gordon/preview.png
+path=characters/gordon/prefab.xml
+anim_speed=0.8
+height=1.95
+
+[Barney Calhoun]
+description=Black Mesa Security Guard
+preview=characters/barney/preview.png
+path=characters/barney/prefab.xml
+anim_speed=0.8
+height=1.95
+
+[Scientist (Einstein)]
+description=Science Team member
+preview=characters/scientists/preview-einstein.png
+path=characters/scientists/prefab-einstein.xml
+anim_speed=0.8
+height=1.85
+
+[Scientist (Nerd)]
+description=Science Team member
+preview=characters/scientists/preview-nerd.png
+path=characters/scientists/prefab-nerd.xml
+anim_speed=0.8
+height=1.85
+
+[Scientist (Slick)]
+description=Science Team member
+preview=characters/scientists/preview-slick.png
+path=characters/scientists/prefab-slick.xml
+anim_speed=0.8
+height=1.85
+
+[Scientist (Luther)]
+description=Science Team member
+preview=characters/scientists/preview-luther.png
+path=characters/scientists/prefab-luther.xml
+anim_speed=0.8
+height=1.85
+
+[G-Man]
+description=Unknown
+preview=characters/gman/preview.png
+path=characters/gman/prefab.xml
+anim_speed=0.8
+height=1.95
+
+[Marine (Grunt)]
+description=United States Marine Corp
+preview=characters/marines/preview-grunt.png
+path=characters/marines/prefab-grunt.xml
+anim_speed=0.8
+height=1.85
+
+[Marine (Grunt, Dark Skin)]
+description=United States Marine Corp
+preview=characters/marines/preview-grunt.png
+path=characters/marines/prefab-grunt-dark.xml
+anim_speed=0.8
+height=1.85
+
+[Marine (Commander)]
+description=United States Marine Corp
+preview=characters/marines/preview-commander.png
+path=characters/marines/prefab-commander.xml
+anim_speed=0.8
+height=1.85
+
+[Marine (m203)]
+description=United States Marine Corp
+preview=characters/marines/preview-m203.png
+path=characters/marines/prefab-m203.xml
+anim_speed=0.8
+height=1.85
+
+[Marine (Shotgunner)]
+description=United States Marine Corp
+preview=characters/marines/preview-shotgunner.png
+path=characters/marines/prefab-shotgunner.xml
+anim_speed=0.8
+height=1.85
+
+[Marine (Shotgunner, Dark Skin)]
+description=United States Marine Corp
+preview=characters/marines/preview-shotgunner.png
+path=characters/marines/prefab-shotgunner-dark.xml
+anim_speed=0.8
+height=1.85
+
+[Assassin]
+description=Unknown
+preview=characters/assassin/preview.png
+path=characters/assassin/prefab.xml
+anim_speed=0.8
+height=1.85

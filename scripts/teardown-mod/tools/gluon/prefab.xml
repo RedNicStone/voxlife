@@ -1,0 +1,18 @@
+<prefab version="1.6.2">
+	<group name="instance=MOD/tools/gluon/prefab.xml" pos="2.21 1.13 0.68" rot="0.0 0.0 0.0">
+		<body pos="-0.71 0.44 0.92" rot="3.0 1.9 2.0" dynamic="false">
+			<vox pos="0.225 -0.425 -0.825" file="MOD/tools/gluon/model.vox" object="gun" scale="0.25"/>
+			<vox pos="0.238 -0.493 -0.3" file="MOD/tools/gluon/model.vox" object="backpack" scale="0.25"/>
+			<vox pos="0.238 -0.563 -0.26" file="MOD/tools/gluon/model.vox" object="canisters" scale="0.25"/>
+			<vox pos="0.382 -0.308 -0.84" rot="30.0 0.0 0.0" file="MOD/tools/gluon/model.vox" object="display" scale="0.25"/>
+			<vox pos="0.35 -0.337 -0.975" rot="0 0 90" file="MOD/tools/gluon/model.vox" object="gun1" scale="0.25"/>
+			<vox pos="0.2 -0.337 -0.975" rot="0 0 90" file="MOD/tools/gluon/model.vox" object="gun1" scale="0.25"/>
+			<vox pos="0.263 -0.275 -0.975" rot="0 0 0" file="MOD/tools/gluon/model.vox" object="gun1" scale="0.25"/>
+			<vox pos="0.263 -0.425 -0.975" rot="0 0 0" file="MOD/tools/gluon/model.vox" object="gun1" scale="0.25"/>
+			<location name="tp_action_lh" tags="name=tp_action_lh ik_hand" pos="0.16594 -0.41438 -0.4144" rot="0.0 90.0 0.0"/>
+			<location name="tp_action_rh" tags="name=tp_action_rh ik_hand" pos="0.29593 -0.41438 -0.4144" rot="0.0 90.0 0.0"/>
+			<location name="muzzle_right" tags="name=muzzle_right" pos="0.24094 -0.30938 -1.3704" rot="0.0 0.0 0.0"/>
+		</body>
+	</group>
+</prefab>
+

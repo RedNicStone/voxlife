@@ -1,0 +1,12 @@
+name = Vox-life
+author = Gabe Rundlett
+description = A Half-Life mod for Teardown, including all the weapons and maps.
+tags = 
+
+# If description contains [noupload] the description on Steam workshop will not be overwritten.
+# Available tags (comma-separated):
+# Map      - A custom map with no particular gameplay
+# Gameplay - Mod has a mission, objective or other gameplay
+# Asset    - A collection of assets for others to use
+# Vehicle  - Mod contains drivable, custom vehicles
+# Tool     - Mod adds a custom weapon or other tool

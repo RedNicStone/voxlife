@@ -1,0 +1,106 @@
+<prefab version="1.6.0">
+	<group name="instance=MOD/characters/scientists/prefab-einstein.xml" pos="0.0 2.6 0.8" rot="0.0 0.0 0.0">
+		<group prop0="texture=12 0.5" prop1="density=4.000000">
+			<animator name="animator" file="MOD/characters/scientists/animdata.bin">
+				<body name="Bip001" tags="bone=Bip001 Bip001 nomerge" pos="0.000000 0.875000 -0.050000" rot="-90.000000 -90.000000 0.000000" dynamic="false">
+					<body name="pelvis" tags="bone=pelvis pelvis nomerge" pos="0.000000 0.000000 0.000000" rot="-90.000000 -89.999992 0.000000" dynamic="false">
+						<vox tags="unbreakable nocull bone" pos="-0.125 0.025 -0.025" rot="-90.000023 -90.000008 0.000010" file="MOD/characters/scientists/model.vox" object="pelvis" scale="0.5"/>
+						<joint tags="bone" pos="-0.1 0.0 0.0" type="ball" size="0.1"/>
+						<body name="stomach" tags="bone=stomach stomach nomerge" pos="0.15 0.0 0.0" rot="0.000000 0.000000 -0.000000" dynamic="false">
+							<vox tags="unbreakable nocull bone" pos="-0.075 0.025 -0.025" rot="-90.000023 -90.000008 0.000010" file="MOD/characters/scientists/model.vox" object="stomach" scale="0.5"/>
+							<joint tags="bone" rot="0.0 90 0" type="cone" rotstrength="0.00001" rotspring="0.005" limits="30 10" iklimits="60 20"/>
+							<body name="chest" tags="bone=chest chest nomerge" pos="0.200000 -0.000219 -0.000000" rot="-0.000000 0.000000 0.000000" dynamic="false">
+								<vox tags="unbreakable nocull bone" pos="-0.075 0.025 -0.025" rot="-90.000023 -90.000008 0.000010" file="MOD/characters/scientists/model.vox" object="chest" scale="0.5"/>
+								<joint tags="bone" rot="0.0 90 0" type="cone" rotstrength="0.00001" rotspring="0.005" limits="30 10" iklimits="60 20"/>
+								<body name="neck" tags="bone=neck neck nomerge" pos="0.275 -0.025 0.0" rot="-0.000000 -0.000000 -0.000000" dynamic="false">
+									<vox tags="unbreakable nocull bone" pos="-0.05 0.025 0.0" rot="-90.000023 -90.000008 0.000010" density="6" file="MOD/characters/scientists/model.vox" object="neck" scale="0.5"/>
+									<joint tags="bone" pos="-0.05 0.0 0.0" rot="0.0 90 0" type="cone" rotstrength="0.0002" rotspring="0.005" limits="20 5" iklimits="50 30"/>
+									<body name="head" tags="bone=head head nomerge" pos="0.125000 0.000000 -0.000000" rot="-0.000000 -0.000000 0.000000" dynamic="false">
+										<vox tags="unbreakable nocull bone" pos="-0.1 0.05 -0.025" rot="-90.000023 -90.000008 0.000010" density="0.8" file="MOD/characters/scientists/model.vox" object="head-einstein" scale="0.5"/>
+										<joint tags="bone" pos="-0.05 0.0 0.0" rot="-90.0 180.0 70.0" type="cone" rotstrength="0.0002" rotspring="0.005" limits="30 15" iklimits="60 45"/>
+										<location name="ik_head" tags="name=ik_head" pos="0.075 0.075 0.0" rot="0.0 180.0 90.0"/>
+									</body>
+								</body>
+								<body name="shoulder_l" tags="bone=shoulder_l shoulder_l nomerge" pos="0.250000 0.000219 0.075000" rot="179.954376 -89.999992 0.000000" dynamic="false">
+									<vox tags="unbreakable nocull bone" pos="0.05 -0.025 -0.1" rot="90.045616 0.000011 -0.000011" file="MOD/characters/scientists/model.vox" object="shoulder_l" scale="0.5"/>
+									<joint tags="bone" rot="90.0 0.0 80.0" type="cone" rotstrength="0.0002" rotspring="0.01" limits="15 5" iklimits="30 5"/>
+									<body name="arm_upper_l" tags="bone=arm_upper_l arm_upper_l nomerge" pos="0.125000 0.000000 0.000000" rot="0.045630 0.000000 0.000116" dynamic="false">
+										<vox tags="unbreakable nocull bone" pos="0.175000 -0.000000 -0.050000" rot="89.999985 0.000011 -0.000127" file="MOD/characters/scientists/model.vox" object="arm_upper_l" scale="0.5"/>
+										<joint tags="bone" pos="0.0 0.0 -0.05" rot="45.0 90.0 45.0" type="cone" rotstrength="0.00001" rotspring="0.01" limits="90 15" iklimits="120 90"/>
+										<body name="arm_lower_l" tags="bone=arm_lower_l arm_lower_l nomerge" pos="0.350000 0.000000 0.000000" rot="-0.000000 0.000000 -5.194605" dynamic="false">
+											<vox tags="unbreakable nocull bone selfcollide" pos="0.127 -0.014 -0.05" rot="89.999985 0.000011 5.194478" file="MOD/characters/scientists/model.vox" object="arm_lower_l" scale="0.5"/>
+											<joint tags="bone" rot="180 0 0" type="hinge" size="0.05" rotstrength="0.00001" rotspring="0.0001" limits="0 150"/>
+											<body name="hand_l" tags="bone=hand_l hand_l nomerge" pos="0.276134 0.000000 -0.000000" rot="-90.000000 -0.000005 5.194495" dynamic="false">
+												<vox tags="unbreakable nocull bone selfcollide" pos="0.05 0.05 -0.05" rot="180.000000 0.000018 0.000016" file="MOD/characters/scientists/model.vox" object="hand_l" scale="0.5"/>
+												<joint tags="bone" rot="0.0 90.0 90.0" type="cone" rotstrength="0.00001" rotspring="0.005" limits="30 10" iklimits="60 90"/>
+												<location name="ik_hand_l" tags="name=ik_hand_l" pos="0.075 0.025 0.0" rot="-90.0 0.0 0.0"/>
+											</body>
+										</body>
+									</body>
+								</body>
+								<body name="shoulder_r" tags="bone=shoulder_r shoulder_r nomerge" pos="0.250000 0.000219 -0.075000" rot="-179.954376 89.999992 0.000000" dynamic="false">
+									<vox tags="unbreakable nocull bone" pos="0.1 -0.025 0.1" rot="90.045616 180.000000 -0.000014" file="MOD/characters/scientists/model.vox" object="shoulder_r" scale="0.5"/>
+									<joint tags="bone" rot="90.0 0.0 80.0" type="cone" rotstrength="0.0002" rotspring="0.01" limits="15 5" iklimits="30 5"/>
+									<body name="arm_upper_r" tags="bone=arm_upper_r arm_upper_r nomerge" pos="0.125000 0.000000 0.000000" rot="-0.045616 0.000000 -0.000072" dynamic="false">
+										<vox tags="unbreakable nocull bone" pos="0.175000 0.000001 0.050000" rot="89.999992 180.000000 -0.000086" file="MOD/characters/scientists/model.vox" object="arm_upper_r" scale="0.5"/>
+										<joint tags="bone" pos="0.0 0.0 0.05" rot="45.0 90.0 -45" type="cone" rotstrength="0.00001" rotspring="0.01" limits="90 15" iklimits="120 90"/>
+										<body name="arm_lower_r" tags="bone=arm_lower_r arm_lower_r nomerge" pos="0.350000 -0.000000 0.000000" rot="0.000000 -0.000000 -5.194455" dynamic="false">
+											<vox tags="unbreakable nocull bone selfcollide" pos="0.127 -0.014 0.05" rot="90.000000 180.000000 -5.194541" file="MOD/characters/scientists/model.vox" object="arm_lower_r" scale="0.5"/>
+											<joint tags="bone" rot="180 0 0" type="hinge" size="0.05" rotstrength="0.00001" rotspring="0.0001" limits="0 150"/>
+											<body name="hand_r" tags="bone=hand_r hand_r nomerge" pos="0.276134 0.000000 -0.000000" rot="90.000000 0.000000 5.194522" dynamic="false">
+												<vox tags="unbreakable nocull bone selfcollide" pos="0.1 0.05 0.05" rot="180.000000 -179.999985 -0.000012" file="MOD/characters/scientists/model.vox" object="hand_r" scale="0.5"/>
+												<joint tags="bone" rot="0.0 90.0 0.0" type="cone" rotstrength="0.00001" rotspring="0.005" limits="30 10" iklimits="60 90"/>
+												<location name="ik_hand_r" tags="name=ik_hand_r" pos="0.075 0.025 0.0" rot="90.0 0.0 0.0"/>
+											</body>
+										</body>
+									</body>
+								</body>
+								<joint name="joint_tie" tags="attachment" pos="0.2 0.075 0.0" rot="0 0 90" type="hinge" size="0.05" rotstrength="0.00001" rotspring="0" collide="false" limits="-90 0">
+									<vox tags="attachment unbreakable nocull noproxyshape" pos="0.0 0.0 0.025" rot="0 0 0" density="2" prop="true" file="MOD/characters/scientists/model.vox" object="tie" scale="0.5"/>
+								</joint>
+							</body>
+						</body>
+						<body name="leg_upper_l" tags="bone=leg_upper_l leg_upper_l nomerge" pos="-0.000000 0.000000 0.112500" rot="0.000010 180.000000 0.000238" dynamic="false">
+							<vox tags="unbreakable nocull bone" pos="0.425000 0.024998 0.025000" rot="-89.999786 90.000000 0.000000" file="MOD/characters/scientists/model.vox" object="leg_upper_l" scale="0.5"/>
+							<joint tags="bone" pos="0.1 0.0 0.0" rot="-30.0 120.0 0.0" type="cone" rotstrength="0.00001" rotspring="0.005" limits="45 10" iklimits="120 45"/>
+							<joint name="joint_radio" tags="attachment" pos="0.075 0.0 -0.075" rot="-180.0 0.0 0.0" type="hinge" size="0.05" rotstrength="0.0001" collide="false" limits="-60 60">
+								<vox tags="attachment unbreakable nocull noproxyshape" pos="0.2 0.0 0.0" rot="90.0 -90.0 0.0" density="2" collide="false" prop="true" file="MOD/characters/scientists/model.vox" object="radio" scale="0.5"/>
+							</joint>
+							<body name="leg_lower_l" tags="bone=leg_lower_l leg_lower_l nomerge" pos="0.375000 0.000000 -0.000000" rot="-0.000000 0.000000 -3.576984" dynamic="false">
+								<vox tags="unbreakable nocull bone selfcollide" pos="0.399 0.025 0.0" rot="-93.576767 90.000000 -0.000003" file="MOD/characters/scientists/model.vox" object="leg_lower_l" scale="0.5"/>
+								<joint tags="bone" rot="180 0 0" type="hinge" size="0.05" rotstrength="0.00001" rotspring="0.0001" limits="0 110"/>
+								<body name="foot_l" tags="bone=foot_l foot_l nomerge" pos="0.400780 0.000000 0.000000" rot="-0.000011 0.000010 3.576749" dynamic="false">
+									<vox tags="unbreakable nocull bone" pos="0.100000 0.025001 0.000000" rot="-90.000008 89.999985 0.000005" file="MOD/characters/scientists/model.vox" object="foot_l" scale="0.5"/>
+									<joint tags="bone" rot="-90.0 0.0 -90.0" type="cone" rotstrength="0.00001" rotspring="0.005" limits="30 10" iklimits="45 10"/>
+									<location name="ik_foot_l" tags="name=ik_foot_l" pos="0.1 0.025 0.0" rot="0.0 0.0 90.0"/>
+									<body name="toes_l" tags="bone=toes_l toes_l nomerge" pos="0.100000 0.125000 0.000000" rot="0.000000 -0.000003 90.000000" dynamic="false">
+										<vox tags="unbreakable nocull bone" pos="0.050001 -0.000000 0.000000" rot="-0.000005 89.999969 -0.000019" file="MOD/characters/scientists/model.vox" object="toes_l" scale="0.5"/>
+										<joint tags="bone" rot="0.0 0.0 0.0" type="hinge" size="0.05" rotstrength="0.001" rotspring="0.01" limits="-10 30"/>
+									</body>
+								</body>
+							</body>
+						</body>
+						<body name="leg_upper_r" tags="bone=leg_upper_r leg_upper_r nomerge" pos="0.000000 -0.000000 -0.112500" rot="0.000010 180.000000 -0.000085" dynamic="false">
+							<vox tags="unbreakable nocull bone" pos="0.425000 0.025001 0.025000" rot="-90.000107 90.000000 0.000000" file="MOD/characters/scientists/model.vox" object="leg_upper_r" scale="0.5"/>
+							<joint tags="bone" pos="0.1 0.0 0.0" rot="-30.0 60.0 0.0" type="cone" rotstrength="0.00001" rotspring="0.005" limits="45 10" iklimits="120 45"/>
+							<body name="leg_lower_r" tags="bone=leg_lower_r leg_lower_r nomerge" pos="0.375000 0.000000 -0.000000" rot="-0.000000 0.000000 -3.575604" dynamic="false">
+								<vox tags="unbreakable nocull bone selfcollide" pos="0.399 0.025 0.0" rot="-93.575706 90.000000 0.000002" file="MOD/characters/scientists/model.vox" object="leg_lower_r" scale="0.5"/>
+								<joint tags="bone" rot="180 0 0" type="hinge" size="0.05" rotstrength="0.00001" rotspring="0.0001" limits="0 110"/>
+								<body name="foot_r" tags="bone=foot_r foot_r nomerge" pos="0.400780 0.000000 0.000000" rot="-0.000000 0.000002 3.575693" dynamic="false">
+									<vox tags="unbreakable nocull bone" pos="0.100000 0.024996 0.000000" rot="-90.000015 89.999992 0.000000" file="MOD/characters/scientists/model.vox" object="foot_r" scale="0.5"/>
+									<joint tags="bone" rot="-90.0 0.0 -90.0" type="cone" rotstrength="0.00001" rotspring="0.005" limits="30 10" iklimits="45 10"/>
+									<location name="ik_foot_r" tags="name=ik_foot_r" pos="0.1 0.025 0.0" rot="0.0 0.0 90.0"/>
+									<body name="toes_r" tags="bone=toes_r toes_r nomerge" pos="0.100000 0.125000 -0.000000" rot="0.000000 -0.000026 90.000000" dynamic="false">
+										<vox tags="unbreakable nocull bone" pos="0.049996 0.000000 0.000000" rot="-0.000000 89.999992 -0.000005" file="MOD/characters/scientists/model.vox" object="toes_r" scale="0.5"/>
+										<joint tags="bone" rot="0.0 0.0 0.0" type="hinge" size="0.05" rotstrength="0.001" rotspring="0.01" limits="-10 30"/>
+									</body>
+								</body>
+							</body>
+						</body>
+					</body>
+				</body>
+			</animator>
+		</group>
+	</group>
+</prefab>
+

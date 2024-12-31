@@ -1,0 +1,4 @@
+<scene version="1.6.2" shadowVolume="256 256 256">
+	<script file="MOD/changelevel.lua"/>
+	<script file="MOD/tools.lua"/>
+</scene>

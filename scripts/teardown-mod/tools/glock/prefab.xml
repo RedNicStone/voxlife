@@ -1,0 +1,23 @@
+<prefab version="1.6.2">
+	<group name="instance=MOD/tools/glock/prefab.xml" pos="0.1 0.7 0.0" rot="0.0 0.0 0.0">
+		<group name="eye_space" pos="0.0 0.0 0.0">
+			<location name="fp_action" tags="name=fp_action" pos="0.01 -0.57 -1.18" rot="0.0 0.0 2.0"/>
+			<location name="tp_action" tags="name=tp_action" pos="0.0 -0.7 -0.5" rot="0.0 0.0 0.0"/>
+			<location name="tp_run" tags="name=tp_run" pos="0.0 -0.7 -0.5" rot="0.0 0.0 0.0"/>
+			<location name="tp_crouch" tags="name=tp_crouch" pos="0.0 -0.7 -0.5" rot="0.0 0.0 0.0"/>
+		</group>
+		<group name="tool_space" pos="0.0 0.0 0.0">
+			<body pos="0.0 0.0 0.0" dynamic="false">
+				<vox pos="0.2 0.125 0.1" file="MOD/tools/glock/model.vox" object="gun" scale="0.25"/>
+				<vox pos="0.2 0.0 0.25" rot="-10.0 0.0 0.0" file="MOD/tools/glock/model.vox" object="grip" scale="0.24"/>
+				<vox pos="0.22 0.195 0.075" file="MOD/tools/glock/model.vox" object="ejector" scale="0.25"/>
+				<vox pos="0.213 0.075 0.14" file="MOD/tools/glock/model.vox" object="trigger" scale="0.25"/>
+				<vox pos="0.213 0.1 0.125" file="MOD/tools/glock/model.vox" object="trigger2" scale="0.25"/>
+			</body>
+			<location name="tp_action_lh" tags="name=tp_action_lh ik_hand" pos="0.13 0.1 0.156" rot="0.0 90.0 0.0"/>
+			<location name="tp_action_rh" tags="name=tp_action_rh ik_hand" pos="0.26 0.1 0.156" rot="0.0 90.0 0.0"/>
+			<location name="muzzle_right" tags="name=muzzle_right" pos="0.23 0.2 -0.2" rot="0.0 0.0 0.0"/>
+		</group>
+	</group>
+</prefab>
+

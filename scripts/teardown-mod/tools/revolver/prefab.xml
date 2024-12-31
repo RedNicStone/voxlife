@@ -1,0 +1,22 @@
+<prefab version="1.6.2">
+	<group name="instance=MOD/tools/revolver/prefab.xml" pos="0.4 0.7 0.0" rot="0.0 0.0 0.0">
+		<group name="eye_space" pos="0.0 0.0 0.0">
+			<location name="fp_action" tags="name=fp_action" pos="0.025 -0.45 -0.925" rot="0.0 0.0 0.0"/>
+			<location name="tp_action" tags="name=tp_action" pos="0.0 -0.7 -0.5" rot="0.0 0.0 0.0"/>
+			<location name="tp_run" tags="name=tp_run" pos="0.0 -0.7 -0.5" rot="0.0 0.0 0.0"/>
+			<location name="tp_crouch" tags="name=tp_crouch" pos="0.0 -0.7 -0.5" rot="0.0 0.0 0.0"/>
+		</group>
+		<group name="tool_space" pos="0.0 0.0 0.0">
+			<body pos="0.0 0.0 0.0" dynamic="false">
+				<vox pos="0.2 0.075 0.05" file="MOD/tools/revolver/model.vox" object="gun" scale="0.3"/>
+				<vox pos="0.201 -0.03 0.225" rot="-10.0 0.0 0.0" file="MOD/tools/revolver/model.vox" object="grip" scale="0.28"/>
+				<vox pos="0.199 0.132 0.125" file="MOD/tools/revolver/model.vox" object="ejector" scale="0.32"/>
+				<vox pos="0.203 0.18 0.255" rot="-10.0 0.0 0.0" file="MOD/tools/revolver/model.vox" object="hammer" scale="0.25"/>
+			</body>
+			<location name="tp_action_lh" tags="name=tp_action_lh ik_hand" pos="0.13 0.05 0.206" rot="0.0 90.0 0.0"/>
+			<location name="tp_action_rh" tags="name=tp_action_rh ik_hand" pos="0.26 0.05 0.206" rot="0.0 90.0 0.0"/>
+			<location name="muzzle_right" tags="name=muzzle_right" pos="0.205 0.175 -0.2" rot="0.0 0.0 0.0"/>
+		</group>
+	</group>
+</prefab>
+

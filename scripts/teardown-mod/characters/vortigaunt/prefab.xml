@@ -1,0 +1,88 @@
+<prefab version="1.2.0">
+	<group name="instance=MOD/characters/vortigaunt/prefab.xml">
+		<group prop0="texture=12 0.5">
+			<script file="MOD/characters/vortigaunt/animation.lua">
+				<animator name="animator" file="MOD/characters/vortigaunt/animdata.bin">
+					<body name="pelvis" dynamic="false" tags="bone=pelvis pelvis nomerge" pos="0.003126 0.943009 -0.184744" rot="0.0 0.0 0.0">
+						<vox pos="-0.028126 -0.043009 0.034744" rot="0.0 0.0 0.0" file="MOD/characters/vortigaunt/model.vox" object="pelvis" tags="unbreakable nocull bone" scale="0.5"/>
+						<body name="stomach" dynamic="false" tags="bone=stomach stomach nomerge" pos="0.000000 0.113943 0.026823" rot="13.246605 0.000000 0.000000">
+							<vox pos="-0.028126 0.032261 -0.050823" rot="-13.246605 0.000000 0.000000" file="MOD/characters/vortigaunt/model.vox" object="stomach" tags="unbreakable nocull bone" scale="0.5"/>
+							<joint type="ball" size="0.1" tags="bone"/>
+							<body name="mixamorig:Spine1" dynamic="false" tags="bone=mixamorig:Spine1 mixamorig:Spine1 nomerge" pos="0.000000 0.136567 0.000000" rot="0.000009 0.000000 0.000000">
+								<body name="chest" dynamic="false" tags="bone=chest chest nomerge" pos="0.000000 0.156077 -0.000000" rot="0.0 0.0 0.0">
+									<vox pos="-0.028126 0.005879 -0.010769" rot="-13.246614 0.000000 0.000000" file="MOD/characters/vortigaunt/model.vox" object="chest" tags="unbreakable nocull bone" scale="0.5"/>
+									<joint type="ball" size="0.1" tags="bone"/>
+									<body name="neck" dynamic="false" tags="bone=neck neck nomerge" pos="0.000000 0.175586 0.000000" rot="-13.246614 0.000000 0.000000">
+										<vox pos="-0.053126 0.137277 0.200630" rot="0.0 0.0 0.0" file="MOD/characters/vortigaunt/model.vox" object="neck" tags="unbreakable nocull bone" scale="0.5"/>
+										<joint type="ball" size="0.1" tags="bone"/>
+										<body name="head" dynamic="false" tags="bone=head head nomerge" pos="0.000000 0.073050 0.045761" rot="0.0 0.0 0.0">
+											<vox pos="-0.028126 -0.035773 0.404869" rot="0.0 0.0 0.0" file="MOD/characters/vortigaunt/model.vox" object="head" tags="unbreakable nocull bone" scale="0.5"/>
+											<joint type="ball" size="0.1" tags="bone"/>
+										</body>
+									</body>
+									<body name="shoulder_l" dynamic="false" tags="bone=shoulder_l shoulder_l nomerge" pos="0.176260 0.191024 -0.003934" rot="84.972183 91.285133 0.006048">
+										<vox pos="0.025346 0.187781 0.104668" rot="1.049282 -104.358330 84.811028" file="MOD/characters/vortigaunt/model.vox" object="shoulder_l" tags="unbreakable nocull bone" scale="0.5"/>
+										<joint type="ball" size="0.1" tags="bone"/>
+										<body name="arm_upper_l" dynamic="false" tags="bone=arm_upper_l arm_upper_l nomerge" pos="-0.000000 0.352311 0.000000" rot="4.527212 0.000000 12.229665">
+											<vox pos="-0.055255 0.055729 0.046451" rot="-101.208710 -3.070721 79.087120" file="MOD/characters/vortigaunt/model.vox" object="arm_upper_l" tags="unbreakable nocull bone" scale="0.5"/>
+											<joint type="ball" size="0.1" tags="bone"/>
+											<body name="arm_lower_l" dynamic="false" tags="bone=arm_lower_l arm_lower_l nomerge" pos="-0.000000 0.279179 -0.000000" rot="-4.315383 0.000000 -9.685506">
+												<vox pos="-0.020707 0.162167 0.111490" rot="-28.105129 -76.079262 84.955933" file="MOD/characters/vortigaunt/model.vox" object="arm_lower_l" tags="unbreakable nocull bone" scale="0.5"/>
+												<joint type="ball" size="0.1" tags="bone"/>
+												<body name="hand_l" dynamic="false" tags="bone=hand_l hand_l nomerge" pos="0.000000 0.478556 -0.000000" rot="0.000000 0.000000 0.000000">
+													<vox pos="-0.036113 0.091888 0.036842" rot="-28.105129 -76.079262 84.955933" file="MOD/characters/vortigaunt/model.vox" object="hand_l" tags="unbreakable nocull bone" scale="0.5"/>
+													<joint type="ball" size="0.1" tags="bone"/>
+												</body>
+											</body>
+										</body>
+									</body>
+									<body name="shoulder_r" dynamic="false" tags="bone=shoulder_r shoulder_r nomerge" pos="-0.176260 0.191158 -0.003366" rot="84.928574 -91.099632 -0.005174">
+										<vox pos="-0.026430 0.193844 0.105490" rot="-1.049313 102.251213 -84.811180" file="MOD/characters/vortigaunt/model.vox" object="shoulder_r" tags="unbreakable nocull bone" scale="0.5"/>
+										<joint type="ball" size="0.1" tags="bone"/>
+										<body name="arm_upper_r" dynamic="false" tags="bone=arm_upper_r arm_upper_r nomerge" pos="0.000000 0.352311 0.000000" rot="4.651868 0.000000 -11.739598">
+											<vox pos="0.052707 0.061329 0.046889" rot="-101.546234 2.707026 -79.394516" file="MOD/characters/vortigaunt/model.vox" object="arm_upper_r" tags="unbreakable nocull bone" scale="0.5"/>
+											<joint type="ball" size="0.1" tags="bone"/>
+											<body name="arm_lower_r" dynamic="false" tags="bone=arm_lower_r arm_lower_r nomerge" pos="0.000000 0.278895 -0.000000" rot="-4.039957 0.000000 10.806748">
+												<vox pos="0.024920 0.218368 0.114940" rot="-11.526169 92.687553 -85.457047" file="MOD/characters/vortigaunt/model.vox" object="arm_lower_r" tags="unbreakable nocull bone" scale="0.5"/>
+												<joint type="ball" size="0.1" tags="bone"/>
+												<body name="hand_r" dynamic="false" tags="bone=hand_r hand_r nomerge" pos="0.000000 0.478206 0.000000" rot="0.000000 -0.000000 -0.000000">
+													<vox pos="0.050151 0.097615 0.033755" rot="-11.526169 92.687553 -85.457047" file="MOD/characters/vortigaunt/model.vox" object="hand_r" tags="unbreakable nocull bone" scale="0.5"/>
+													<joint type="ball" size="0.1" tags="bone"/>
+												</body>
+											</body>
+										</body>
+									</body>
+								</body>
+							</body>
+						</body>
+						<body name="leg_upper_l" dynamic="false" tags="bone=leg_upper_l leg_upper_l nomerge" pos="0.180745 -0.063111 0.041984" rot="170.939178 179.574860 -2.666972">
+							<vox pos="-0.028006 0.279182 0.036882" rot="170.949066 -180.000000 2.700622" file="MOD/characters/vortigaunt/model.vox" object="leg_upper_l" tags="unbreakable nocull bone" scale="0.5"/>
+							<joint type="ball" size="0.1" tags="bone"/>
+							<body name="leg_lower_l" dynamic="false" tags="bone=leg_lower_l leg_lower_l nomerge" pos="0.000000 0.431598 0.000000" rot="18.050358 0.000000 3.198377">
+								<vox pos="0.054676 0.248565 -0.027965" rot="-170.910767 178.166321 5.607721" file="MOD/characters/vortigaunt/model.vox" object="leg_lower_l" tags="unbreakable nocull bone" scale="0.5"/>
+								<joint type="ball" size="0.1" tags="bone"/>
+								<body name="foot_l" dynamic="false" tags="bone=foot_l foot_l nomerge" pos="-0.000000 0.230086 -0.000000" rot="38.393745 -2.112831 0.000000">
+									<vox pos="0.026028 0.244682 -0.083274" rot="-132.372894 176.728394 4.565470" file="MOD/characters/vortigaunt/model.vox" object="foot_l" tags="unbreakable nocull bone" scale="0.5"/>
+									<joint type="ball" size="0.1" tags="bone"/>
+								</body>
+							</body>
+						</body>
+						<body name="leg_upper_r" dynamic="false" tags="bone=leg_upper_r leg_upper_r nomerge" pos="-0.180745 -0.063111 0.046249" rot="170.759415 -179.566711 2.664284">
+							<vox pos="0.034231 0.280042 0.033542" rot="170.769501 180.000000 -2.699262" file="MOD/characters/vortigaunt/model.vox" object="leg_upper_r" tags="unbreakable nocull bone" scale="0.5"/>
+							<joint type="ball" size="0.1" tags="bone"/>
+							<body name="leg_lower_r" dynamic="false" tags="bone=leg_lower_r leg_lower_r nomerge" pos="0.000000 0.431815 0.000000" rot="10.281164 0.000000 -3.071372">
+								<vox pos="0.001810 0.255677 0.002764" rot="-178.898102 -178.966675 -5.677672" file="MOD/characters/vortigaunt/model.vox" object="leg_lower_r" tags="unbreakable nocull bone" scale="0.5"/>
+								<joint type="ball" size="0.1" tags="bone"/>
+								<body name="foot_r" dynamic="false" tags="bone=foot_r foot_r nomerge" pos="-0.000000 0.227275 0.000000" rot="49.483284 1.825361 0.000000">
+									<vox pos="0.029385 0.266336 -0.081780" rot="-129.232910 -176.189377 -4.285723" file="MOD/characters/vortigaunt/model.vox" object="foot_r" tags="unbreakable nocull bone" scale="0.5"/>
+									<joint type="ball" size="0.1" tags="bone"/>
+								</body>
+							</body>
+						</body>
+					</body>
+				</animator>
+			</script>
+		</group>
+	</group>
+</prefab>
+
