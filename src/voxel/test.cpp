@@ -341,13 +341,15 @@ void init_renderer(VoxelizeApp *self) {
 }
 
 void init_pipelines(VoxelizeApp *self) {
+    if (self->pipeline_manager.is_valid())
+        return;
+
     self->pipeline_manager = daxa::PipelineManager({
         .device = self->device,
         .shader_compile_options = {
             .root_paths = {
                 DAXA_SHADER_INCLUDE_DIR,
-                "src/voxel/shaders",
-                "C:/dev/projects/cpp/voxlife/src/voxel/shaders",
+                "../../src/voxel/shaders",
             },
             .language = daxa::ShaderLanguage::GLSL,
             .enable_debug_info = true,
@@ -805,7 +807,7 @@ void download_data(VoxelizeApp *self, std::string_view level_name, std::vector<s
 
     std::filesystem::create_directories(std::format("brush/{}", level_name));
 
-    for (int model_index = 0; model_index < voxel_models.size(); ++model_index) {
+    for (int model_index = 0; model_index < self->model_manifests.size(); ++model_index) {
         auto it = voxel_models.begin();
         std::advance(it, model_index);
         auto const &[texture_id, voxel_model_list] = *it;
@@ -868,7 +870,7 @@ void update(VoxelizeApp *self) {
     // std::this_thread::sleep_for(50ms);
 }
 
-void test_voxelization_gui(voxlife::bsp::bsp_handle bsp_handle) {
+void voxelization_gui(voxlife::bsp::bsp_handle bsp_handle) {
     auto app = VoxelizeApp();
     init(&app);
     init_bsp_data(&app, bsp_handle);

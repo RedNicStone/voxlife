@@ -333,7 +333,7 @@ namespace voxlife::hl1 {
                 auto &worldspawn = std::get<voxlife::hl1::entity_types::worldspawn>(worldspawn_entities.front());
                 auto &light_env = std::get<voxlife::hl1::entity_types::light_environment>(light_env_entities.front());
 
-                info.environment.skybox = std::format("MOD/{}.dds", worldspawn.skyname);
+                info.environment.skybox = std::format("MOD/skyboxes/{}.dds", worldspawn.skyname);
                 info.environment.brightness = float(light_env.light_intensity) * 0.1f;
                 info.environment.sun_color = glm::vec3(light_env.light_color) / 255.0f;
                 auto pitch = light_env.pitch == std::numeric_limits<float>::max() ? light_env.angle_pitch : light_env.pitch;

@@ -154,8 +154,7 @@
                 // "xen_dm",
             ],
             "stopAtEntry": false,
-            // "cwd": "C:/Users/gabe/OneDrive/Documents/Teardown/mods/voxlife-maps",
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/scripts/teardown-mod",
             "environment": [],
             "linux": {
                 "type": "lldb"

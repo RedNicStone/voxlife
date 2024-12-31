@@ -18,7 +18,7 @@ Options:
 Example usage:
 cmake -DARG_G="/mnt/int/games/linux/steamapps/common/Half-Life" -DARG_N="hl1" -DARG_O="/home/user/path/to/mod" -P assemble_cube_maps.cmake
 
-cmake -DARG_G="C:/Program Files (x86)/Steam/steamapps/common/Half-Life" -DARG_N="hl1" -DARG_O="C:/Users/user/OneDrive/Documents/Teardown/mods/Mod Testing" -P assemble_cube_maps.cmake
+cmake -DARG_G="C:/Program Files (x86)/Steam/steamapps/common/Half-Life" -DARG_N="hl1" -P assemble_cube_maps.cmake
 
 Supported games are:
     hl1
@@ -42,12 +42,15 @@ if(NOT DEFINED ARG_N)
 endif()
 
 if(NOT DEFINED ARG_O)
-    message(FATAL_ERROR "Output path is required")
+    # message(FATAL_ERROR "Output path is required")
+    set(ARG_O "../teardown-mod/skyboxes")
 endif()
 
 set(CUBEMAP_GAME_PATH   ${ARG_G})
 set(CUBEMAP_GAME_NAME   ${ARG_N})
 set(CUBEMAP_OUTPUT_PATH ${ARG_O})
+
+file(MAKE_DIRECTORY ${CUBEMAP_OUTPUT_PATH})
 
 if(${CUBEMAP_GAME_NAME} STREQUAL "custom")
     if(NOT DEFINED C)
